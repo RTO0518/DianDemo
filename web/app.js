@@ -6,6 +6,12 @@
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
+/* 所有拼进 innerHTML 的动态内容都要过这一层。
+   SPARQL 查询结果、甲方上传的 CSV 内容、后端错误消息里都可能带尖括号，
+   直接拼进模板等于把它们当 HTML 执行。 */
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g,
+  (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
 const API = {
   async get(path) {
     const res = await fetch(`/api${path}`);
@@ -52,6 +58,9 @@ const state = {
   topo: null,
   switchStates: {},
   scenario: null,
+  applySeq: 0,
+  askSeq: 0,
+  thresholdDirty: false,
   history: [],
   rules: [],
   sparqlExamples: [],
@@ -68,7 +77,16 @@ function switchView(name) {
   $('#pageTitle').textContent = title;
   $('#pageSub').textContent = sub;
   if (name === 'ontology' && state.chart) setTimeout(() => state.chart.resize(), 30);
-  if (name === 'topology' && state.topo) renderTopology();
+  if (name === 'topology') {
+    // 阈值改过之后，拓扑图的过载标记就过期了（后端按新阈值算，图上还是旧的 status）。
+    // 切回来时重拉一次，但不能把用户手动改的开关状态冲掉。
+    if (state.thresholdDirty) {
+      state.thresholdDirty = false;
+      refreshTopology();
+    } else if (state.topo) {
+      renderTopology();
+    }
+  }
   if (name === 'sparql' && !state.sparqlLoaded) initSparql();
   if (name === 'audit') initAudit();
 }
@@ -296,7 +314,7 @@ async function loadClass(name) {
       <div class="detail-section"><h4>相关公理</h4><div class="tag-row">${axioms}</div></div>
       <div class="detail-section"><h4>实例（${c.instance_count}，含子类）</h4><div class="tag-row">${instances || '<span class="muted">无实例</span>'}</div></div>`;
   } catch (err) {
-    box.innerHTML = `<div class="detail-empty">加载失败：${err.message}</div>`;
+    box.innerHTML = `<div class="detail-empty">加载失败：${esc(err.message)}</div>`;
   }
 }
 
@@ -461,7 +479,11 @@ function syncScenarioBar() {
 }
 
 async function applyStates(states, extra = {}) {
+  // 请求序号守卫：用户连点两个工况时，先发的请求可能后到。
+  // 没有这个守卫，迟到的旧响应会覆盖新工况的数字，出现「按钮亮着恢复运行、户数却是 1830」。
+  const my = ++state.applySeq;
   const res = await API.post('/grid/workstate', { states });
+  if (my !== state.applySeq) return;
   state.switchStates = states;
   state.topo.states = { ...state.topo.states, ...states };
   state.topo.nodes.forEach((n) => {
@@ -551,6 +573,24 @@ async function initTopology() {
   await applyStates({ S1: 'open' }, { switchId: 'S1' });
 }
 
+/* 阈值变更后重拉拓扑数据：设备 status（过载/重载）要按新阈值重算，
+   但当前开关状态是用户手动摆出来的，必须保留。 */
+async function refreshTopology() {
+  if (!state.topo) {
+    await initTopology();
+    return;
+  }
+  const prevStates = { ...state.switchStates };
+  const prevScenario = state.scenario;
+  state.topo = await API.get('/grid/topology');
+  if (Object.keys(prevStates).length) {
+    state.scenario = prevScenario;
+    await applyStates(prevStates);
+  } else {
+    renderTopology();
+  }
+}
+
 const SCENARIOS = {
   s1:    { states: { S1: 'open' }, extra: { switchId: 'S1' } },
   br1:   { states: { BR1: 'open' }, extra: { switchId: 'BR1' } },
@@ -614,6 +654,7 @@ function renderTrace(data) {
 
 async function ask(text) {
   if (!text.trim()) return;
+  const my = ++state.askSeq;
   addMessage('user', text);
   const history = state.history.slice(-8);
   state.history.push({ role: 'user', content: text });
@@ -622,22 +663,34 @@ async function ask(text) {
   btn.textContent = '推理中';
   try {
     const res = await API.post('/chat', { message: text, history });
+    if (my !== state.askSeq) return;   // 已经问了新的问题，这条答案作废
     const rules = res.rules_cited && res.rules_cited.length ? `依据 ${res.rules_cited.join(' / ')}` : '';
     addMessage('assistant', res.answer, `${res.provider.model} · ${res.elapsed_ms} ms${rules ? ' · ' + rules : ''}`);
     state.history.push({ role: 'assistant', content: res.answer });
     renderTrace(res);
   } catch (err) {
+    if (my !== state.askSeq) return;
     addMessage('assistant', `请求失败：${err.message}`);
   } finally {
-    btn.disabled = false;
-    btn.textContent = '发送';
+    if (my === state.askSeq) {
+      btn.disabled = false;
+      btn.textContent = '发送';
+    }
   }
 }
 
 $('#chatForm').addEventListener('submit', (e) => {
   e.preventDefault();
   const input = $('#chatInput');
-  const text = input.value;
+  const text = input.value.trim();
+  if (!text) return;
+  // 发送按钮 disabled 时浏览器不会触发隐式提交，但脚本派发 submit 仍会进来。
+  // 上一条还在推理就提示一下，别把用户敲的字静默吞掉。
+  if ($('#sendBtn').disabled) {
+    input.placeholder = '上一条还在推理中，请稍候再发';
+    setTimeout(() => { input.placeholder = '输入问题，回车发送'; }, 2200);
+    return;
+  }
   input.value = '';
   ask(text);
 });
@@ -780,19 +833,19 @@ async function runSparql() {
       return;
     }
     const cols = data.variables;
-    const head = cols.map((c) => `<th>${c}</th>`).join('');
+    const head = cols.map((c) => `<th>${esc(c)}</th>`).join('');
     const body = data.rows.map((row) => `<tr>${cols.map((c) => {
       const t = row[c];
       const cls = t && t.type === 'uri' ? 'cell-uri' : 'cell-val';
-      const title = t && t.type === 'uri' ? ` title="${t.value}"` : '';
-      return `<td class="${cls}"${title}>${termText(t)}</td>`;
+      const title = t && t.type === 'uri' ? ` title="${esc(t.value)}"` : '';
+      return `<td class="${cls}"${title}>${esc(termText(t))}</td>`;
     }).join('')}</tr>`).join('');
     box.innerHTML = `<table class="table sparql-table">
       <thead><tr>${head}</tr></thead><tbody>${body}</tbody></table>`;
     $('#sparqlMeta').textContent =
       `${data.elapsed_ms} ms · ${data.row_count} 行${data.truncated ? ' · 已截断' : ''}`;
   } catch (err) {
-    box.innerHTML = `<div class="error-box">${err.message}</div>`;
+    box.innerHTML = `<div class="error-box">${esc(err.message)}</div>`;
     $('#sparqlMeta').textContent = '';
   } finally {
     btn.disabled = false;
@@ -875,7 +928,7 @@ async function runIngest() {
     renderIngest(data);
   } catch (err) {
     $('#ingestReportCard').hidden = false;
-    $('#ingestSummary').innerHTML = `<span class="bad-text">请求失败：${err.message}</span>`;
+    $('#ingestSummary').innerHTML = `<span class="bad-text">请求失败：${esc(err.message)}</span>`;
   } finally {
     btn.disabled = false;
     btn.textContent = '开始校验';
@@ -890,24 +943,24 @@ function renderIngest(data) {
     ? '<span class="ok-text">校验通过</span>'
     : '<span class="bad-text">存在阻断性问题</span>';
 
-  const parts = [`<b>${L.filename || '台账'}</b>：${L.summary}`];
-  if (T) parts.push(`<b>${T.filename || '拓扑表'}</b>：${T.summary}`);
-  if (data.next_step) parts.push(`<span class="muted">${data.next_step}</span>`);
+  const parts = [`<b>${esc(L.filename || '台账')}</b>：${esc(L.summary)}`];
+  if (T) parts.push(`<b>${esc(T.filename || '拓扑表')}</b>：${esc(T.summary)}`);
+  if (data.next_step) parts.push(`<span class="muted">${esc(data.next_step)}</span>`);
   $('#ingestSummary').innerHTML = parts.join('<br>');
 
   const mp = L.columns.mapping.map((m) =>
-    `<span class="map-item"><i>${m.column}</i><span class="arrow">→</span><code>${m.label}</code></span>`).join('');
+    `<span class="map-item"><i>${esc(m.column)}</i><span class="arrow">→</span><code>${esc(m.label)}</code></span>`).join('');
   const extra = [];
   if (L.columns.unmapped.length) {
-    extra.push(`<div class="map-warn">未识别列（会被忽略）：${L.columns.unmapped.join('、')}</div>`);
+    extra.push(`<div class="map-warn">未识别列（会被忽略）：${esc(L.columns.unmapped.join('、'))}</div>`);
   }
   if (L.columns.missing_required.length) {
-    extra.push(`<div class="map-bad">缺少必填列：${L.columns.missing_required.join('、')}</div>`);
+    extra.push(`<div class="map-bad">缺少必填列：${esc(L.columns.missing_required.join('、'))}</div>`);
   }
   $('#ingestMapping').innerHTML = mp + extra.join('');
 
   $('#ingestTypes').innerHTML = Object.entries(L.type_stat)
-    .map(([k, v]) => `<span class="tag">${k} <b>${v}</b></span>`).join('');
+    .map(([k, v]) => `<span class="tag">${esc(k)} <b>${v}</b></span>`).join('');
 
   const issues = [...(L.issues || []), ...((T && T.issues) || [])];
   if (!issues.length) {
@@ -915,9 +968,9 @@ function renderIngest(data) {
   } else {
     $('#ingestIssues').innerHTML = issues.map((i) => `
       <div class="issue ${i.level === 'error' ? 'issue-error' : 'issue-warn'}">
-        <span class="issue-code">${i.code}</span>
+        <span class="issue-code">${esc(i.code)}</span>
         <span class="issue-row">${i.row ? '第 ' + i.row + ' 行' : '全表'}</span>
-        <span class="issue-msg">${i.message}</span>
+        <span class="issue-msg">${esc(i.message)}</span>
       </div>`).join('');
   }
 
@@ -975,9 +1028,9 @@ function renderAudit(records) {
       <tr>
         <td class="code">${r.seq}</td>
         <td class="nowrap">${(r.ts || '').replace('T', ' ')}</td>
-        <td><span class="pill rule">${KIND_CN[r.kind] || r.kind}</span></td>
-        <td>${r.action || '—'}</td>
-        <td class="wrap">${r.summary || ''}${r.ok ? '' : ' <span class="bad-text">（失败）</span>'}</td>
+        <td><span class="pill rule">${esc(KIND_CN[r.kind] || r.kind)}</span></td>
+        <td>${esc(r.action || '—')}</td>
+        <td class="wrap">${esc(r.summary || '')}${r.ok ? '' : ' <span class="bad-text">（失败）</span>'}</td>
         <td class="code">${(r.rules || []).join(' ') || '—'}</td>
         <td class="num">${r.elapsed_ms || 0} ms</td>
       </tr>`).join('')}</tbody>`;
@@ -997,7 +1050,7 @@ async function initThresholds() {
     state.thresholds = data;
     renderThresholds(data);
   } catch (err) {
-    $('#thresholdList').innerHTML = `<div class="list-empty">阈值加载失败：${err.message}</div>`;
+    $('#thresholdList').innerHTML = `<div class="list-empty">阈值加载失败：${esc(err.message)}</div>`;
   }
 }
 
@@ -1032,6 +1085,7 @@ function renderThresholds(data) {
         const res = await API.put('/reason/thresholds', { values: { [key]: val } });
         renderThresholds(res.thresholds);
         loadOverloadHints();
+        state.thresholdDirty = true;   // 拓扑图的过载标记需要按新阈值重算
       } catch (err) {
         alert(`阈值修改失败：${err.message}`);
         initThresholds();
@@ -1044,6 +1098,7 @@ $('#resetThresholds').addEventListener('click', async () => {
   const data = await API.post('/reason/thresholds/reset', {});
   renderThresholds(data);
   loadOverloadHints();
+  state.thresholdDirty = true;
 });
 
 async function loadOverloadHints() {

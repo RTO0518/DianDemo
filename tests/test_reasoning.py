@@ -140,3 +140,13 @@ def test_energized_path_explains_supply(engine) -> None:
     path = engine.energized_path("TR_A")
     assert path, "应能给出 TR_A 的供电路径"
     assert any(step["via_switch"] == "S1" for step in path)
+
+def test_transfer_rejects_negative_feeder_load(engine) -> None:
+    """负的模拟负荷会让容量校验失去意义，必须在引擎层就拒绝（不只靠接口层 schema）。"""
+    with pytest.raises(ValueError, match="不能为负"):
+        engine.transfer_plans("S1", "open", feeder_load_override={"FY": -100.0})
+
+
+def test_transfer_rejects_unknown_feeder_in_override(engine) -> None:
+    with pytest.raises(ValueError, match="不是有效馈线"):
+        engine.transfer_plans("S1", "open", feeder_load_override={"NOT_A_FEEDER": 100.0})

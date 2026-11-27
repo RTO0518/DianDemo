@@ -16,7 +16,8 @@ class TransferRequest(BaseModel):
     switch_id: str = Field("", description="导致失电的开关编号；与 states 二选一")
     state: str = Field("open")
     target_feeder_load_kw: Optional[float] = Field(
-        None, description="可选：模拟对侧馈线高峰负荷（kW），用于检验重载工况"
+        None, ge=0, le=1e7,
+        description="可选：模拟对侧馈线高峰负荷（kW），用于检验重载工况；必须为非负数",
     )
     states: Dict[str, str] = Field(default_factory=dict, description="可选：整组开关状态，优先于 switch_id")
 

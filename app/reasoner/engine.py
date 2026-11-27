@@ -264,6 +264,12 @@ class ReasoningEngine:
     ) -> dict:
         m = self.model
         trace: List[dict] = []
+        # engine 是公开方法，可能被 Agent 工具或脚本直接调用，不能只靠接口层校验
+        for fid, val in (feeder_load_override or {}).items():
+            if fid not in m.devices or m.devices[fid].kind != "feeder":
+                raise ValueError(f"馈线负荷覆盖参数里的 {fid} 不是有效馈线")
+            if val is None or val < 0:
+                raise ValueError(f"馈线 {fid} 的模拟负荷不能为负：{val}")
         state, _ = self._apply(switch_id, new_state, state_overrides)
         energized, _ = bfs_energized(m, state)
         dead_tr = [t for t in m.transformers if t.id not in energized]

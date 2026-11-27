@@ -122,10 +122,15 @@ def preview(payload: IngestPayload) -> dict:
 
     ready = ledger["passed"] and (topo is None or topo["passed"])
     blocked = []
-    if not ledger["passed"]:
+    if ledger.get("parse_error"):
+        blocked.append(f"台账无法解析：{ledger['parse_error']}")
+    elif not ledger["passed"]:
         blocked.append(f"台账存在 {len([i for i in ledger['issues'] if i['level'] == 'error'])} 处阻断性问题")
-    if topo is not None and not topo["passed"]:
-        blocked.append(f"拓扑表存在 {len([i for i in topo['issues'] if i['level'] == 'error'])} 处阻断性问题")
+    if topo is not None:
+        if topo.get("parse_error"):
+            blocked.append(f"拓扑表无法解析：{topo['parse_error']}")
+        elif not topo["passed"]:
+            blocked.append(f"拓扑表存在 {len([i for i in topo['issues'] if i['level'] == 'error'])} 处阻断性问题")
 
     audit.record(
         "ingest", "数据接入预览",

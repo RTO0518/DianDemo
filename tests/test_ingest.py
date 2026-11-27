@@ -300,3 +300,36 @@ def test_stats_reports_skipped() -> None:
     st = rdfgen.stats(ledger["devices_detail"], [])
     assert st["skipped"] >= 1
     assert "BAD_ROW" in st["skipped_codes"]
+
+def test_binary_content_rejected_with_clear_message() -> None:
+    """误传图片/压缩包时，csv 模块会抛 _csv.Error，不能让它变成 500。"""
+    result = validator.validate("\x00\x01\x02\x03binary", "evil.csv")
+    assert result["passed"] is False
+    assert result.get("parse_error")
+    assert "二进制" in result["summary"]
+    assert result["devices_detail"] == []
+
+
+def test_empty_file_returns_full_structure() -> None:
+    """空文件也必须返回完整字段，否则 /ingest/preview 会在取 devices_detail 时 KeyError。"""
+    result = validator.validate("", "empty.csv")
+    assert result["passed"] is False
+    for key in ("devices_detail", "columns", "issues", "by_code", "type_stat", "devices"):
+        assert key in result, f"缺少字段 {key}"
+    assert result["devices_detail"] == []
+
+
+def test_topology_binary_rejected() -> None:
+    text, enc = _read(LEDGER)
+    devices = validator.validate(text, "l.csv", enc)["devices_detail"]
+    result = topo_mod.validate("\x00binary", devices, "evil.csv")
+    assert result["passed"] is False
+    assert result.get("parse_error")
+
+
+def test_topology_empty_returns_full_structure() -> None:
+    text, enc = _read(LEDGER)
+    devices = validator.validate(text, "l.csv", enc)["devices_detail"]
+    result = topo_mod.validate("", devices, "empty.csv")
+    for key in ("edges", "issues", "valid_edges", "orphans", "checks"):
+        assert key in result

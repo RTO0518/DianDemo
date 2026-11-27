@@ -122,9 +122,17 @@ def _sniff_delimiter(text: str) -> str:
 
 def parse_csv(text: str) -> Tuple[List[str], List[List[str]]]:
     text = text.lstrip("\ufeff")
+    # 误传图片、压缩包、Excel 原生格式（xlsx 是 zip）时会走到这里。
+    # csv 模块遇到 NUL 直接抛 _csv.Error，最终表现为 500，这里提前给一句人话。
+    if "\x00" in text:
+        raise ValueError("文件包含二进制内容（NUL 字节），不是文本型 CSV。"
+                         "如果是从 Excel 直接改扩展名得到的文件，请在 Excel 里另存为「CSV UTF-8」。")
     delimiter = _sniff_delimiter(text)
-    reader = csv.reader(io.StringIO(text), delimiter=delimiter)
-    rows = [r for r in reader if any((c or "").strip() for c in r)]
+    try:
+        reader = csv.reader(io.StringIO(text), delimiter=delimiter)
+        rows = [r for r in reader if any((c or "").strip() for c in r)]
+    except csv.Error as exc:
+        raise ValueError(f"CSV 解析失败：{exc}。请检查引号是否成对、分隔符是否一致。") from exc
     if not rows:
         return [], []
     return [str(c).strip() for c in rows[0]], rows[1:]
@@ -185,11 +193,27 @@ def _bool(raw: str) -> Tuple[bool, str]:
 # 主流程
 # ---------------------------------------------------------------------------
 def validate(text: str, filename: str = "", encoding: str = "utf-8") -> dict:
-    headers, body = parse_csv(text)
+    try:
+        headers, body = parse_csv(text)
+    except ValueError as exc:
+        return {
+            "filename": filename, "encoding": encoding, "passed": False,
+            "rows_total": 0, "rows_valid": 0, "issues": [], "checks": CHECKS,
+            "devices_detail": [], "columns": {"detected": [], "mapping": [],
+                                              "unmapped": [], "missing_required": [], "conflicts": []},
+            "by_code": {}, "duplicates": {}, "type_stat": {},
+            "devices": 0,
+            "summary": f"无法解析：{exc}",
+            "parse_error": str(exc),
+        }
     if not headers:
         return {
             "filename": filename, "encoding": encoding, "passed": False,
             "rows_total": 0, "rows_valid": 0, "issues": [], "checks": CHECKS,
+            "devices_detail": [], "columns": {"detected": [], "mapping": [],
+                                              "unmapped": [], "missing_required": [], "conflicts": []},
+            "by_code": {}, "duplicates": {}, "type_stat": {},
+            "devices": 0,
             "summary": "文件为空或无法解析出表头",
         }
 

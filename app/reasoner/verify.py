@@ -8,10 +8,15 @@
 """
 from __future__ import annotations
 
+import threading
 from typing import Callable, List, Optional
 
 from .engine import ReasoningEngine, get_engine
 from .thresholds import get_thresholds
+
+# run_all 会临时把阈值切回基线再还原。多个请求同时进来时，
+# 后一个可能把前一个的还原动作覆盖掉，导致演示现场设定的阈值被悄悄改回基线。
+_VERIFY_LOCK = threading.Lock()
 
 
 def _fmt_districts(districts: List[dict]) -> str:
@@ -149,24 +154,26 @@ def run_all(engine: Optional[ReasoningEngine] = None) -> dict:
     """
     engine = engine or get_engine()
     th = get_thresholds()
-    in_use = th.current()
-    base = th.current(baseline=True)
     results = []
-    th.restore(base)
-    try:
-        for item in QUESTIONS:
-            try:
-                outcome = item["run"](engine)
-            except Exception as exc:  # 单题失败不影响其余题目
-                outcome = {"expected": "-", "actual": f"推理异常：{exc}", "passed": False, "data": {}, "trace": []}
-            results.append({
-                "id": item["id"],
-                "question": item["question"],
-                "rule": item["rule"],
-                **outcome,
-            })
-    finally:
-        th.restore(in_use)
+    with _VERIFY_LOCK:
+        in_use = th.current()
+        base = th.current(baseline=True)
+        th.restore(base)
+        try:
+            for item in QUESTIONS:
+                try:
+                    outcome = item["run"](engine)
+                except Exception as exc:  # 单题失败不影响其余题目
+                    outcome = {"expected": "-", "actual": f"推理异常：{exc}", "passed": False,
+                               "data": {}, "trace": []}
+                results.append({
+                    "id": item["id"],
+                    "question": item["question"],
+                    "rule": item["rule"],
+                    **outcome,
+                })
+        finally:
+            th.restore(in_use)
     passed = sum(1 for r in results if r["passed"])
     return {
         "results": results,

@@ -175,7 +175,7 @@ flowchart TB
 | 后端 | FastAPI + Pydantic | 37 个接口，全量类型校验 |
 | 前端 | 原生 JS + ECharts | 零构建，无需 npm，双击即用 |
 | 大模型 | OpenAI 兼容协议 | 在线 API / vLLM / Ollama / LM Studio 通吃 |
-| 测试 | pytest | 89 项，含 8 道端到端推理题 |
+| 测试 | pytest | 95 项，含 8 道端到端推理题 |
 
 ---
 
@@ -184,7 +184,7 @@ flowchart TB
 不是「跑通了」，是可复现的断言：
 
 ```
-pytest tests -q                    → 89 passed
+pytest tests -q                    → 95 passed
 python scripts/smoke_api.py        → 37 个接口全 200
 python -m app.reasoner.verify      → 8/8 道推理题通过
 ```
@@ -227,7 +227,7 @@ app/
   audit.py                运行审计
   api/                    REST 接口
 web/                      前端（无构建步骤）
-tests/                    89 项测试
+tests/                    95 项测试
 docs/                     设计文档、验证报告、架构评估
 scripts/                  接口自检、模板反导、文档生成
 ```
@@ -238,7 +238,7 @@ scripts/                  接口自检、模板反导、文档生成
 
 | 文档 | 内容 |
 |---|---|
-| [**设计文档**](DESIGN.md) | 完整技术设计：本体、推理、Agent、接入、10 条踩坑记录 |
+| [**设计文档**](DESIGN.md) | 完整技术设计：本体、推理、Agent、接入、14 条踩坑记录 |
 | [推理验证报告](docs/推理验证报告.md) | 8 道题的预期/实际比对与推理链 |
 | [交付说明](docs/交付说明.md) | 对应需求文档五项交付的完成情况 |
 | [架构方案评估](docs/架构方案评估与采纳说明.md) | 对甲方架构方案的采纳与取舍说明 |

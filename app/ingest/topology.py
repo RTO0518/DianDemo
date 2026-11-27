@@ -46,8 +46,13 @@ def _norm(s: str) -> str:
 
 def parse(text: str) -> Tuple[List[str], List[dict]]:
     text = text.lstrip("\ufeff")
-    reader = csv.reader(io.StringIO(text))
-    rows = [r for r in reader if any((c or "").strip() for c in r)]
+    if "\x00" in text:
+        raise ValueError("拓扑表包含二进制内容（NUL 字节），不是文本型 CSV")
+    try:
+        reader = csv.reader(io.StringIO(text))
+        rows = [r for r in reader if any((c or "").strip() for c in r)]
+    except csv.Error as exc:
+        raise ValueError(f"拓扑表解析失败：{exc}") from exc
     if not rows:
         return [], []
     headers = [str(c).strip() for c in rows[0]]
@@ -69,10 +74,17 @@ def parse(text: str) -> Tuple[List[str], List[dict]]:
 
 def validate(text: str, devices: List[dict], filename: str = "") -> dict:
     """devices 来自台账校验结果的 devices_detail（含 cls / errors）。"""
-    headers, edges = parse(text)
+    try:
+        headers, edges = parse(text)
+    except ValueError as exc:
+        return {"filename": filename, "passed": False, "edges": [], "issues": [],
+                "rows_total": 0, "valid_edges": 0, "orphans": [],
+                "checks": TOPOLOGY_CHECKS, "summary": f"无法解析：{exc}",
+                "parse_error": str(exc)}
     if not headers:
         return {"filename": filename, "passed": False, "edges": [], "issues": [],
-                "checks": TOPOLOGY_CHECKS, "summary": "拓扑表为空或无法解析表头"}
+                "rows_total": 0, "valid_edges": 0, "orphans": [],
+                "checks": TOPOLOGY_CHECKS, "summary": "拓扑表为空或无法解析出表头"}
 
     by_code: Dict[str, dict] = {d["code"]: d for d in devices if d.get("code")}
     switch_codes = {d["code"] for d in devices if d.get("cls") in ("SectionSwitch", "TieSwitch", "Breaker")}
