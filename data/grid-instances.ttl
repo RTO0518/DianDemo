@@ -1,0 +1,398 @@
+@prefix data: <http://grid.ontology.local/data#> .
+@prefix grid: <http://grid.ontology.local/onto#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+data:BR1 a grid:Breaker,
+        grid:Switch ;
+    rdfs:label "F01线出线断路器"@zh ;
+    grid:belongsToFeeder data:FX ;
+    grid:code "BR1" ;
+    grid:connectsFrom data:FX ;
+    grid:connectsTo data:LS1 ;
+    grid:hasOperatingState grid:ClosedState ;
+    grid:normallyOpen false ;
+    rdfs:comment "变电站出线开关，断开即整条馈线失电。"@zh .
+
+data:BR2 a grid:Breaker,
+        grid:Switch ;
+    rdfs:label "F02线出线断路器"@zh ;
+    grid:belongsToFeeder data:FY ;
+    grid:code "BR2" ;
+    grid:connectsFrom data:FY ;
+    grid:connectsTo data:LS4 ;
+    grid:hasOperatingState grid:ClosedState ;
+    grid:normallyOpen false ;
+    rdfs:comment "F02 线出线开关。"@zh .
+
+data:CU_TA a grid:Customer,
+        grid:ResidentialCustomer ;
+    rdfs:label "金桥小区物业"@zh ;
+    grid:code "CU_TA" ;
+    grid:isCriticalLoad false ;
+    grid:servedByDistrict data:TA .
+
+data:CU_TB a grid:Customer,
+        grid:ResidentialCustomer ;
+    rdfs:label "阳光花园物业"@zh ;
+    grid:code "CU_TB" ;
+    grid:isCriticalLoad false ;
+    grid:servedByDistrict data:TB .
+
+data:CU_TC1 a grid:CommercialCustomer,
+        grid:Customer ;
+    rdfs:label "城东精密制造有限公司"@zh ;
+    grid:code "CU_TC1" ;
+    grid:isCriticalLoad true ;
+    grid:servedByDistrict data:TC .
+
+data:CU_TC2 a grid:CommercialCustomer,
+        grid:Customer ;
+    rdfs:label "工业园污水处理站"@zh ;
+    grid:code "CU_TC2" ;
+    grid:isCriticalLoad true ;
+    grid:servedByDistrict data:TC .
+
+data:CU_TD a grid:Customer,
+        grid:ResidentialCustomer ;
+    rdfs:label "锦绣华庭物业"@zh ;
+    grid:code "CU_TD" ;
+    grid:isCriticalLoad false ;
+    grid:servedByDistrict data:TD .
+
+data:CU_TE a grid:CommercialCustomer,
+        grid:Customer ;
+    rdfs:label "龙湖天街商业中心"@zh ;
+    grid:code "CU_TE" ;
+    grid:isCriticalLoad true ;
+    grid:servedByDistrict data:TE .
+
+data:CU_TF a grid:Customer,
+        grid:ResidentialCustomer ;
+    rdfs:label "幸福里物业"@zh ;
+    grid:code "CU_TF" ;
+    grid:isCriticalLoad false ;
+    grid:servedByDistrict data:TF .
+
+data:CU_TG a grid:CommercialCustomer,
+        grid:Customer ;
+    rdfs:label "科创大厦管理方"@zh ;
+    grid:code "CU_TG" ;
+    grid:isCriticalLoad false ;
+    grid:servedByDistrict data:TG .
+
+data:CU_TH a grid:Customer,
+        grid:ResidentialCustomer ;
+    rdfs:label "南苑小区物业"@zh ;
+    grid:code "CU_TH" ;
+    grid:isCriticalLoad false ;
+    grid:servedByDistrict data:TH .
+
+data:GD_2026_018 a grid:MaintenanceOrder ;
+    rdfs:label "工业园支线计划检修"@zh ;
+    grid:assignedToTeam data:TEAM1 ;
+    grid:code "GD_2026_018" ;
+    grid:orderStatus "已批准"@zh ;
+    grid:plannedEnd "2026-12-05T12:00:00"^^xsd:dateTime ;
+    grid:plannedStart "2026-12-05T08:00:00"^^xsd:dateTime ;
+    grid:priority 2 ;
+    grid:targetsEquipment data:LS3 .
+
+data:GD_2026_019 a grid:MaintenanceOrder ;
+    rdfs:label "主干段电缆故障抢修"@zh ;
+    grid:assignedToTeam data:TEAM1 ;
+    grid:code "GD_2026_019" ;
+    grid:handlesFault data:F1 ;
+    grid:orderStatus "执行中"@zh ;
+    grid:plannedEnd "2026-11-24T23:30:00"^^xsd:dateTime ;
+    grid:plannedStart "2026-11-24T20:05:00"^^xsd:dateTime ;
+    grid:priority 1 ;
+    grid:targetsEquipment data:LS2 .
+
+data:L1 a grid:Switch,
+        grid:TieSwitch ;
+    rdfs:label "城东联络开关"@zh ;
+    grid:belongsToFeeder data:FX ;
+    grid:code "L1" ;
+    grid:connectsFeeder data:FX,
+        data:FY ;
+    grid:connectsFrom data:LS2 ;
+    grid:connectsTo data:LS4 ;
+    grid:hasOperatingState grid:OpenState ;
+    grid:normallyOpen true ;
+    rdfs:comment "F01 与 F02 之间的联络点，常态分位；合闸可把 F01 下游负荷转移至 F02。"@zh .
+
+data:S1 a grid:SectionSwitch,
+        grid:Switch ;
+    rdfs:label "一号分段开关"@zh ;
+    grid:belongsToFeeder data:FX ;
+    grid:code "S1" ;
+    grid:connectsFrom data:LS1 ;
+    grid:connectsTo data:LS2 ;
+    grid:hasOperatingState grid:ClosedState ;
+    grid:normallyOpen false ;
+    rdfs:comment "主干分段点，断开后 LS2、LS3 及所带三个台区失电。"@zh .
+
+data:S2 a grid:SectionSwitch,
+        grid:Switch ;
+    rdfs:label "二号分段开关"@zh ;
+    grid:belongsToFeeder data:FX ;
+    grid:code "S2" ;
+    grid:connectsFrom data:LS2 ;
+    grid:connectsTo data:LS3 ;
+    grid:hasOperatingState grid:ClosedState ;
+    grid:normallyOpen false ;
+    rdfs:comment "工业园支线分支开关，断开后仅城东工业园台区失电。"@zh .
+
+data:F1 a grid:Fault ;
+    rdfs:label "F01线主干段电缆击穿"@zh ;
+    grid:affectsEquipment data:LS2 ;
+    grid:code "F1" ;
+    grid:durationMinutes 78 ;
+    grid:faultTime "2026-11-24T19:42:00"^^xsd:dateTime ;
+    grid:faultType "电缆绝缘击穿"@zh ;
+    rdfs:comment "晚高峰负荷突增导致电缆中间接头绝缘击穿，S1 保护动作跳闸。"@zh .
+
+data:LR_001 a grid:LoadRecord ;
+    rdfs:label "LR_001"@zh ;
+    grid:code "LR_001" ;
+    grid:currentLoadKW "392"^^xsd:float ;
+    grid:faultTime "2026-11-24T18:00:00"^^xsd:dateTime .
+
+data:LR_002 a grid:LoadRecord ;
+    rdfs:label "LR_002"@zh ;
+    grid:code "LR_002" ;
+    grid:currentLoadKW "418"^^xsd:float ;
+    grid:faultTime "2026-11-24T19:00:00"^^xsd:dateTime .
+
+data:LR_003 a grid:LoadRecord ;
+    rdfs:label "LR_003"@zh ;
+    grid:code "LR_003" ;
+    grid:currentLoadKW "420"^^xsd:float ;
+    grid:faultTime "2026-11-24T20:00:00"^^xsd:dateTime .
+
+data:TA a grid:TransformerDistrict ;
+    rdfs:label "金桥小区台区"@zh ;
+    grid:address "城东街道金桥路 12 号"@zh ;
+    grid:code "TA" ;
+    grid:customerCount 1 ;
+    grid:hasTransformer data:TR_A ;
+    grid:householdCount 500 ;
+    grid:servedByFeeder data:FX .
+
+data:TB a grid:TransformerDistrict ;
+    rdfs:label "阳光花园台区"@zh ;
+    grid:address "城东街道阳光路 8 号"@zh ;
+    grid:code "TB" ;
+    grid:customerCount 1 ;
+    grid:hasTransformer data:TR_B ;
+    grid:householdCount 400 ;
+    grid:servedByFeeder data:FX .
+
+data:TD a grid:TransformerDistrict ;
+    rdfs:label "锦绣华庭台区"@zh ;
+    grid:address "锦绣路 66 号"@zh ;
+    grid:code "TD" ;
+    grid:customerCount 1 ;
+    grid:hasTransformer data:TR_D ;
+    grid:householdCount 350 ;
+    grid:servedByFeeder data:FX .
+
+data:TE a grid:TransformerDistrict ;
+    rdfs:label "龙湖天街台区"@zh ;
+    grid:address "龙湖天街 1 号"@zh ;
+    grid:code "TE" ;
+    grid:customerCount 1 ;
+    grid:hasTransformer data:TR_E ;
+    grid:householdCount 280 ;
+    grid:servedByFeeder data:FX .
+
+data:TF a grid:TransformerDistrict ;
+    rdfs:label "幸福里台区"@zh ;
+    grid:address "幸福里小区"@zh ;
+    grid:code "TF" ;
+    grid:customerCount 1 ;
+    grid:hasTransformer data:TR_F ;
+    grid:householdCount 150 ;
+    grid:servedByFeeder data:FY .
+
+data:TG a grid:TransformerDistrict ;
+    rdfs:label "科创大厦台区"@zh ;
+    grid:address "科创大道 9 号"@zh ;
+    grid:code "TG" ;
+    grid:customerCount 1 ;
+    grid:hasTransformer data:TR_G ;
+    grid:householdCount 200 ;
+    grid:servedByFeeder data:FY .
+
+data:TH a grid:TransformerDistrict ;
+    rdfs:label "南苑小区台区"@zh ;
+    grid:address "南苑路 3 号"@zh ;
+    grid:code "TH" ;
+    grid:customerCount 1 ;
+    grid:hasTransformer data:TR_H ;
+    grid:householdCount 260 ;
+    grid:servedByFeeder data:FY .
+
+data:TR_A a grid:DistributionTransformer ;
+    rdfs:label "配变A"@zh ;
+    grid:belongsToFeeder data:FX ;
+    grid:code "TR_A" ;
+    grid:currentLoadKW "380"^^xsd:float ;
+    grid:locatedOn data:LS2 ;
+    grid:ratedCapacityKW "630"^^xsd:float ;
+    grid:upstreamOf data:LS2 ;
+    grid:voltageLevelKV "10.0"^^xsd:float ;
+    rdfs:comment "金桥小区公用配变。"@zh .
+
+data:TR_B a grid:DistributionTransformer ;
+    rdfs:label "配变B"@zh ;
+    grid:belongsToFeeder data:FX ;
+    grid:code "TR_B" ;
+    grid:currentLoadKW "420"^^xsd:float ;
+    grid:hasLoadRecord data:LR_001,
+        data:LR_002,
+        data:LR_003 ;
+    grid:locatedOn data:LS2 ;
+    grid:ratedCapacityKW "400"^^xsd:float ;
+    grid:upstreamOf data:LS2 ;
+    grid:voltageLevelKV "10.0"^^xsd:float ;
+    rdfs:comment "阳光花园公用配变，冬季晚高峰过载。"@zh .
+
+data:TR_C a grid:DistributionTransformer ;
+    rdfs:label "配变C"@zh ;
+    grid:belongsToFeeder data:FX ;
+    grid:code "TR_C" ;
+    grid:currentLoadKW "200"^^xsd:float ;
+    grid:locatedOn data:LS3 ;
+    grid:ratedCapacityKW "315"^^xsd:float ;
+    grid:upstreamOf data:LS3 ;
+    grid:voltageLevelKV "10.0"^^xsd:float ;
+    rdfs:comment "工业园专用配变。"@zh .
+
+data:TR_D a grid:DistributionTransformer ;
+    rdfs:label "配变D"@zh ;
+    grid:belongsToFeeder data:FX ;
+    grid:code "TR_D" ;
+    grid:currentLoadKW "400"^^xsd:float ;
+    grid:locatedOn data:LS1 ;
+    grid:ratedCapacityKW "630"^^xsd:float ;
+    grid:upstreamOf data:LS1 ;
+    grid:voltageLevelKV "10.0"^^xsd:float ;
+    rdfs:comment "锦绣华庭公用配变。"@zh .
+
+data:TR_E a grid:DistributionTransformer ;
+    rdfs:label "配变E"@zh ;
+    grid:belongsToFeeder data:FX ;
+    grid:code "TR_E" ;
+    grid:currentLoadKW "300"^^xsd:float ;
+    grid:locatedOn data:LS1 ;
+    grid:ratedCapacityKW "500"^^xsd:float ;
+    grid:upstreamOf data:LS1 ;
+    grid:voltageLevelKV "10.0"^^xsd:float ;
+    rdfs:comment "龙湖天街商业配变。"@zh .
+
+data:TR_F a grid:DistributionTransformer ;
+    rdfs:label "配变F"@zh ;
+    grid:belongsToFeeder data:FY ;
+    grid:code "TR_F" ;
+    grid:currentLoadKW "200"^^xsd:float ;
+    grid:locatedOn data:LS4 ;
+    grid:ratedCapacityKW "250"^^xsd:float ;
+    grid:upstreamOf data:LS4 ;
+    grid:voltageLevelKV "10.0"^^xsd:float ;
+    rdfs:comment "幸福里公用配变。"@zh .
+
+data:TR_G a grid:DistributionTransformer ;
+    rdfs:label "配变G"@zh ;
+    grid:belongsToFeeder data:FY ;
+    grid:code "TR_G" ;
+    grid:currentLoadKW "250"^^xsd:float ;
+    grid:locatedOn data:LS4 ;
+    grid:ratedCapacityKW "400"^^xsd:float ;
+    grid:upstreamOf data:LS4 ;
+    grid:voltageLevelKV "10.0"^^xsd:float ;
+    rdfs:comment "科创大厦专用配变。"@zh .
+
+data:TR_H a grid:DistributionTransformer ;
+    rdfs:label "配变H"@zh ;
+    grid:belongsToFeeder data:FY ;
+    grid:code "TR_H" ;
+    grid:currentLoadKW "350"^^xsd:float ;
+    grid:locatedOn data:LS4 ;
+    grid:ratedCapacityKW "500"^^xsd:float ;
+    grid:upstreamOf data:LS4 ;
+    grid:voltageLevelKV "10.0"^^xsd:float ;
+    rdfs:comment "南苑小区公用配变。"@zh .
+
+data:ST1 a grid:Substation ;
+    rdfs:label "城东110kV变电站"@zh ;
+    grid:code "ST1" ;
+    grid:hasFeeder data:FX,
+        data:FY ;
+    grid:voltageLevelKV "110"^^xsd:float .
+
+data:TC a grid:TransformerDistrict ;
+    rdfs:label "城东工业园台区"@zh ;
+    grid:address "城东工业园 A 区"@zh ;
+    grid:code "TC" ;
+    grid:customerCount 2 ;
+    grid:hasTransformer data:TR_C ;
+    grid:householdCount 300 ;
+    grid:servedByFeeder data:FX .
+
+data:TEAM1 a grid:MaintenanceTeam ;
+    rdfs:label "城东抢修班"@zh ;
+    grid:code "TEAM1" ;
+    grid:name "城东抢修班（12人）" .
+
+data:LS3 a grid:LineSection ;
+    rdfs:label "F01线工业园支线"@zh ;
+    grid:belongsToFeeder data:FX ;
+    grid:code "LS3" ;
+    grid:lengthKM "2.1"^^xsd:float ;
+    grid:upstreamOf data:LS2 ;
+    rdfs:comment "经 S2 引出的支线，仅供电给城东工业园台区，末端无联络。"@zh .
+
+data:LS1 a grid:LineSection ;
+    rdfs:label "F01线出口段"@zh ;
+    grid:belongsToFeeder data:FX ;
+    grid:code "LS1" ;
+    grid:lengthKM "1.2"^^xsd:float ;
+    grid:upstreamOf data:FX ;
+    rdfs:comment "变电站出线至一号分段开关，锦绣华庭、龙湖天街两个台区挂接于此段。"@zh .
+
+data:LS4 a grid:LineSection ;
+    rdfs:label "F02线主干段"@zh ;
+    grid:belongsToFeeder data:FY ;
+    grid:code "LS4" ;
+    grid:lengthKM "4.0"^^xsd:float ;
+    grid:upstreamOf data:FY ;
+    rdfs:comment "F02 线主干，与 F01 线经联络开关 L1 相连。"@zh .
+
+data:LS2 a grid:LineSection ;
+    rdfs:label "F01线主干段"@zh ;
+    grid:belongsToFeeder data:FX ;
+    grid:code "LS2" ;
+    grid:lengthKM "3.4"^^xsd:float ;
+    grid:upstreamOf data:LS1 ;
+    rdfs:comment "S1 与 S2 之间的主干段，金桥小区、阳光花园两个台区挂接于此段。"@zh .
+
+data:FY a grid:Feeder ;
+    rdfs:label "城东F02线"@zh ;
+    grid:belongsToSubstation data:ST1 ;
+    grid:code "FY" ;
+    grid:currentLoadKW "800"^^xsd:float ;
+    grid:name "城东F02线" ;
+    grid:ratedCapacityKW "4000"^^xsd:float ;
+    grid:voltageLevelKV "10"^^xsd:float .
+
+data:FX a grid:Feeder ;
+    rdfs:label "城东F01线"@zh ;
+    grid:belongsToSubstation data:ST1 ;
+    grid:code "FX" ;
+    grid:currentLoadKW "1700"^^xsd:float ;
+    grid:name "城东F01线" ;
+    grid:ratedCapacityKW "4000"^^xsd:float ;
+    grid:voltageLevelKV "10"^^xsd:float .
+

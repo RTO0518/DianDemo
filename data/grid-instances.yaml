@@ -1,0 +1,326 @@
+# 样例配电网实例数据
+#
+# 拓扑（单线图）：
+#   ST1 城东110kV变电站
+#    ├─ FX 城东F01线(10kV) ──BR1── LS1出口段 ─┬─ TR_D 锦绣华庭台区(350户)
+#    │                                        ├─ TR_E 龙湖天街台区(280户)
+#    │                                        └─S1── LS2主干段 ─┬─ TR_A 金桥小区(500户)
+#    │                                                             ├─ TR_B 阳光花园(400户)
+#    │                                                             └─S2── LS3支线段 ── TR_C 城东工业园(300户)
+#    └─ FY 城东F02线(10kV) ──BR2── LS4主干段 ─┬─ TR_F 幸福里(150户)
+#                                              ├─ TR_G 科创大厦(200户)
+#                                              └─ TR_H 南苑小区(260户)
+#   联络：L1（LS2 ↔ LS4，常态分位）
+#
+# 关键口径：
+#   馈线负荷 = 该馈线下所有配变负荷之和（build.py 强制校验）
+#   容量与负荷统一用 kW，演示数据按功率因数约 1 折算
+#   户数合计 2440，其中 S1 下游 1200 户（与需求文档示例一致）
+
+substations:
+  - id: ST1
+    name: 城东110kV变电站
+    voltage_kv: 110
+    feeders: [FX, FY]
+
+feeders:
+  - id: FX
+    name: 城东F01线
+    substation: ST1
+    voltage_kv: 10
+    rated_kw: 4000
+    load_kw: 1700          # = 380 + 420 + 200 + 400 + 300
+  - id: FY
+    name: 城东F02线
+    substation: ST1
+    voltage_kv: 10
+    rated_kw: 4000
+    load_kw: 800           # = 200 + 250 + 350
+
+sections:
+  - id: LS1
+    name: F01线出口段
+    feeder: FX
+    upstream: FX
+    length_km: 1.2
+    comment: 变电站出线至一号分段开关，锦绣华庭、龙湖天街两个台区挂接于此段。
+  - id: LS2
+    name: F01线主干段
+    feeder: FX
+    upstream: LS1
+    length_km: 3.4
+    comment: S1 与 S2 之间的主干段，金桥小区、阳光花园两个台区挂接于此段。
+  - id: LS3
+    name: F01线工业园支线
+    feeder: FX
+    upstream: LS2
+    length_km: 2.1
+    comment: 经 S2 引出的支线，仅供电给城东工业园台区，末端无联络。
+  - id: LS4
+    name: F02线主干段
+    feeder: FY
+    upstream: FY
+    length_km: 4.0
+    comment: F02 线主干，与 F01 线经联络开关 L1 相连。
+
+switches:
+  - id: BR1
+    name: F01线出线断路器
+    cls: Breaker
+    state: closed
+    normally_open: false
+    feeder: FX
+    connects: [FX, LS1]
+    comment: 变电站出线开关，断开即整条馈线失电。
+  - id: S1
+    name: 一号分段开关
+    cls: SectionSwitch
+    state: closed
+    normally_open: false
+    feeder: FX
+    connects: [LS1, LS2]
+    comment: 主干分段点，断开后 LS2、LS3 及所带三个台区失电。
+  - id: S2
+    name: 二号分段开关
+    cls: SectionSwitch
+    state: closed
+    normally_open: false
+    feeder: FX
+    connects: [LS2, LS3]
+    comment: 工业园支线分支开关，断开后仅城东工业园台区失电。
+  - id: BR2
+    name: F02线出线断路器
+    cls: Breaker
+    state: closed
+    normally_open: false
+    feeder: FY
+    connects: [FY, LS4]
+    comment: F02 线出线开关。
+  - id: L1
+    name: 城东联络开关
+    cls: TieSwitch
+    state: open
+    normally_open: true
+    feeder: FX
+    connects: [LS2, LS4]
+    comment: F01 与 F02 之间的联络点，常态分位；合闸可把 F01 下游负荷转移至 F02。
+
+transformers:
+  - id: TR_A
+    name: 配变A
+    section: LS2
+    feeder: FX
+    district: TA
+    rated_kw: 630
+    load_kw: 380
+    comment: 金桥小区公用配变。
+  - id: TR_B
+    name: 配变B
+    section: LS2
+    feeder: FX
+    district: TB
+    rated_kw: 400
+    load_kw: 420          # 负载率 105%，过载
+    comment: 阳光花园公用配变，冬季晚高峰过载。
+  - id: TR_C
+    name: 配变C
+    section: LS3
+    feeder: FX
+    district: TC
+    rated_kw: 315
+    load_kw: 200
+    comment: 工业园专用配变。
+  - id: TR_D
+    name: 配变D
+    section: LS1
+    feeder: FX
+    district: TD
+    rated_kw: 630
+    load_kw: 400
+    comment: 锦绣华庭公用配变。
+  - id: TR_E
+    name: 配变E
+    section: LS1
+    feeder: FX
+    district: TE
+    rated_kw: 500
+    load_kw: 300
+    comment: 龙湖天街商业配变。
+  - id: TR_F
+    name: 配变F
+    section: LS4
+    feeder: FY
+    district: TF
+    rated_kw: 250
+    load_kw: 200          # 负载率 80%，重载
+    comment: 幸福里公用配变。
+  - id: TR_G
+    name: 配变G
+    section: LS4
+    feeder: FY
+    district: TG
+    rated_kw: 400
+    load_kw: 250
+    comment: 科创大厦专用配变。
+  - id: TR_H
+    name: 配变H
+    section: LS4
+    feeder: FY
+    district: TH
+    rated_kw: 500
+    load_kw: 350
+    comment: 南苑小区公用配变。
+
+districts:
+  - id: TA
+    name: 金桥小区台区
+    transformer: TR_A
+    feeder: FX
+    households: 500
+    customers_count: 1
+    address: 城东街道金桥路 12 号
+  - id: TB
+    name: 阳光花园台区
+    transformer: TR_B
+    feeder: FX
+    households: 400
+    customers_count: 1
+    address: 城东街道阳光路 8 号
+  - id: TC
+    name: 城东工业园台区
+    transformer: TR_C
+    feeder: FX
+    households: 300
+    customers_count: 2
+    address: 城东工业园 A 区
+  - id: TD
+    name: 锦绣华庭台区
+    transformer: TR_D
+    feeder: FX
+    households: 350
+    customers_count: 1
+    address: 锦绣路 66 号
+  - id: TE
+    name: 龙湖天街台区
+    transformer: TR_E
+    feeder: FX
+    households: 280
+    customers_count: 1
+    address: 龙湖天街 1 号
+  - id: TF
+    name: 幸福里台区
+    transformer: TR_F
+    feeder: FY
+    households: 150
+    customers_count: 1
+    address: 幸福里小区
+  - id: TG
+    name: 科创大厦台区
+    transformer: TR_G
+    feeder: FY
+    households: 200
+    customers_count: 1
+    address: 科创大道 9 号
+  - id: TH
+    name: 南苑小区台区
+    transformer: TR_H
+    feeder: FY
+    households: 260
+    customers_count: 1
+    address: 南苑路 3 号
+
+customers:
+  - id: CU_TA
+    name: 金桥小区物业
+    cls: ResidentialCustomer
+    district: TA
+    critical: false
+  - id: CU_TB
+    name: 阳光花园物业
+    cls: ResidentialCustomer
+    district: TB
+    critical: false
+  - id: CU_TC1
+    name: 城东精密制造有限公司
+    cls: CommercialCustomer
+    district: TC
+    critical: true
+  - id: CU_TC2
+    name: 工业园污水处理站
+    cls: CommercialCustomer
+    district: TC
+    critical: true
+  - id: CU_TD
+    name: 锦绣华庭物业
+    cls: ResidentialCustomer
+    district: TD
+    critical: false
+  - id: CU_TE
+    name: 龙湖天街商业中心
+    cls: CommercialCustomer
+    district: TE
+    critical: true
+  - id: CU_TF
+    name: 幸福里物业
+    cls: ResidentialCustomer
+    district: TF
+    critical: false
+  - id: CU_TG
+    name: 科创大厦管理方
+    cls: CommercialCustomer
+    district: TG
+    critical: false
+  - id: CU_TH
+    name: 南苑小区物业
+    cls: ResidentialCustomer
+    district: TH
+    critical: false
+
+teams:
+  - id: TEAM1
+    name: 城东抢修班
+    members: 12
+
+faults:
+  - id: F1
+    name: F01线主干段电缆击穿
+    equipment: LS2
+    type: 电缆绝缘击穿
+    time: "2026-11-24T19:42:00"
+    duration_min: 78
+    description: 晚高峰负荷突增导致电缆中间接头绝缘击穿，S1 保护动作跳闸。
+
+orders:
+  - id: GD_2026_018
+    name: 工业园支线计划检修
+    equipment: LS3
+    team: TEAM1
+    status: 已批准
+    start: "2026-12-05T08:00:00"
+    end: "2026-12-05T12:00:00"
+    priority: 2
+    comment: 更换 LS3 支线老化的架空导线，需断开 S2 配合停电。
+  - id: GD_2026_019
+    name: 主干段电缆故障抢修
+    equipment: LS2
+    team: TEAM1
+    status: 执行中
+    start: "2026-11-24T20:05:00"
+    end: "2026-11-24T23:30:00"
+    priority: 1
+    fault: F1
+    comment: 故障段已隔离，经 L1 转供恢复非故障区段供电。
+
+load_records:
+  - id: LR_001
+    transformer: TR_B
+    time: "2026-11-24T18:00:00"
+    load_kw: 392
+  - id: LR_002
+    transformer: TR_B
+    time: "2026-11-24T19:00:00"
+    load_kw: 418
+  - id: LR_003
+    transformer: TR_B
+    time: "2026-11-24T20:00:00"
+    load_kw: 420

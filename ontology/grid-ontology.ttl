@@ -1,0 +1,644 @@
+@prefix grid: <http://grid.ontology.local/onto#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+<http://grid.ontology.local/onto> a owl:Ontology ;
+    rdfs:label "配电网本体模型"@zh ;
+    rdfs:comment "面向配电网运行与调度的领域本体，用于支撑故障传播、过载判定、负荷转供等推理性问题。 类与属性的命名对齐 IEC 61970 CIM 的常用术语，但为教学与验证场景做了裁剪。"@zh ;
+    owl:versionInfo "1.0.0" .
+
+grid:Breaker a owl:Class ;
+    rdfs:label "断路器"@zh ;
+    rdfs:comment "具备故障电流开断能力的开关，通常位于变电站出线或分段点。"@zh ;
+    rdfs:subClassOf grid:Switch .
+
+grid:ClosedState a grid:OperatingState,
+        owl:NamedIndividual ;
+    rdfs:label "合位（闭合）"@zh ;
+    grid:code "02" .
+
+grid:CommercialCustomer a owl:Class ;
+    rdfs:label "工商业用户"@zh ;
+    rdfs:comment "工厂、商场、写字楼等经营性用电主体，通常对停电更敏感。"@zh ;
+    rdfs:subClassOf grid:Customer .
+
+grid:OpenState a grid:OperatingState,
+        owl:NamedIndividual ;
+    rdfs:label "分位（断开）"@zh ;
+    grid:code "01" .
+
+grid:ResidentialCustomer a owl:Class ;
+    rdfs:label "居民用户"@zh ;
+    rdfs:comment "居民小区、散户等生活用电主体。"@zh ;
+    rdfs:subClassOf grid:Customer .
+
+grid:SectionSwitch a owl:Class ;
+    rdfs:label "分段开关"@zh ;
+    rdfs:comment "装设于馈线主干或分支上的开关，用于分段隔离故障，正常运行状态为合。"@zh ;
+    rdfs:subClassOf grid:Switch .
+
+grid:address a owl:DatatypeProperty ;
+    rdfs:label "地址"@zh ;
+    rdfs:comment "台区或用户的地理位置描述。"@zh ;
+    rdfs:domain grid:Area ;
+    rdfs:range xsd:string .
+
+grid:affectsCustomer a owl:ObjectProperty ;
+    rdfs:label "影响用户"@zh ;
+    rdfs:comment "停电事件波及的用户实体。"@zh ;
+    rdfs:domain grid:OutageEvent ;
+    rdfs:range grid:Customer .
+
+grid:assignedToTeam a owl:ObjectProperty ;
+    rdfs:label "指派班组"@zh ;
+    rdfs:comment "工单的执行班组。"@zh ;
+    rdfs:domain grid:MaintenanceOrder ;
+    rdfs:range grid:MaintenanceTeam .
+
+grid:belongsToFeeder a owl:ObjectProperty ;
+    rdfs:label "所属馈线"@zh ;
+    rdfs:comment "设备归属的馈线。线路段与配变必须且只能属于一条馈线。"@zh ;
+    rdfs:domain grid:PowerEquipment ;
+    rdfs:range grid:Feeder .
+
+grid:code a owl:DatatypeProperty ;
+    rdfs:label "调度编号"@zh ;
+    rdfs:comment "电力系统内的唯一调度编号，如 S1、F01。"@zh ;
+    rdfs:domain grid:PowerEquipment ;
+    rdfs:range xsd:string .
+
+grid:connectsFrom a owl:ObjectProperty ;
+    rdfs:label "连接端一"@zh ;
+    rdfs:comment "开关的物理连接端之一，与 connectsTo 共同确定开关在拓扑中的位置。"@zh ;
+    rdfs:domain grid:Switch ;
+    rdfs:range grid:PowerEquipment .
+
+grid:connectsTo a owl:ObjectProperty ;
+    rdfs:label "连接端二"@zh ;
+    rdfs:comment "开关的物理连接端之二。"@zh ;
+    rdfs:domain grid:Switch ;
+    rdfs:range grid:PowerEquipment .
+
+grid:currentLoadKW a owl:DatatypeProperty ;
+    rdfs:label "当前负荷"@zh ;
+    grid:unit "kW" ;
+    rdfs:comment "当前有功负荷，过载判定的分子。"@zh ;
+    rdfs:domain grid:PowerEquipment ;
+    rdfs:range xsd:float .
+
+grid:customerCount a owl:DatatypeProperty ;
+    rdfs:label "用户数"@zh ;
+    grid:unit "户" ;
+    rdfs:comment "台区内的用户实体数量。"@zh ;
+    rdfs:domain grid:TransformerDistrict ;
+    rdfs:range xsd:integer .
+
+grid:durationMinutes a owl:DatatypeProperty ;
+    rdfs:label "持续时长"@zh ;
+    grid:unit "分钟" ;
+    rdfs:comment "故障从发生到隔离的时长。"@zh ;
+    rdfs:domain grid:Fault ;
+    rdfs:range xsd:integer .
+
+grid:faultTime a owl:DatatypeProperty ;
+    rdfs:label "故障时间"@zh ;
+    rdfs:comment "故障发生时刻。"@zh ;
+    rdfs:domain grid:Fault ;
+    rdfs:range xsd:dateTime .
+
+grid:faultType a owl:DatatypeProperty ;
+    rdfs:label "故障类型"@zh ;
+    rdfs:comment "电缆击穿、架空断线、配变烧损等。"@zh ;
+    rdfs:domain grid:Fault ;
+    rdfs:range xsd:string .
+
+grid:handlesFault a owl:ObjectProperty ;
+    rdfs:label "处理故障"@zh ;
+    rdfs:comment "工单对应的故障对象。"@zh ;
+    rdfs:domain grid:MaintenanceOrder ;
+    rdfs:range grid:Fault .
+
+grid:hasLoadRecord a owl:ObjectProperty ;
+    rdfs:label "含负荷记录"@zh ;
+    rdfs:comment "配变的历史负荷量测。"@zh ;
+    rdfs:domain grid:DistributionTransformer ;
+    rdfs:range grid:LoadRecord .
+
+grid:hasSection a owl:ObjectProperty ;
+    rdfs:label "含线路段"@zh ;
+    rdfs:comment "馈线包含的线路段集合。与 belongsToFeeder 语义相关但值域不同（后者覆盖全部设备），故不声明为逆属性。"@zh ;
+    rdfs:domain grid:Feeder ;
+    rdfs:range grid:LineSection .
+
+grid:householdCount a owl:DatatypeProperty ;
+    rdfs:label "户数"@zh ;
+    grid:unit "户" ;
+    rdfs:comment "台区内的居民户数，停电影响统计口径。"@zh ;
+    rdfs:domain grid:TransformerDistrict ;
+    rdfs:range xsd:integer .
+
+grid:isCriticalLoad a owl:DatatypeProperty ;
+    rdfs:label "是否重要负荷"@zh ;
+    rdfs:comment "医院、学校、数据中心等重要用户标记，转供排序时优先保障。"@zh ;
+    rdfs:domain grid:Customer ;
+    rdfs:range xsd:boolean .
+
+grid:loadRate a owl:DatatypeProperty ;
+    rdfs:label "负载率"@zh ;
+    grid:unit "%" ;
+    rdfs:comment "当前负荷与额定容量之比，由规则 R4 计算并回写。"@zh ;
+    rdfs:domain grid:PowerEquipment ;
+    rdfs:range xsd:float .
+
+grid:name a owl:DatatypeProperty ;
+    rdfs:label "名称"@zh ;
+    rdfs:comment "设备或对象的中文名称。"@zh ;
+    rdfs:domain grid:Entity ;
+    rdfs:range xsd:string .
+
+grid:orderStatus a owl:DatatypeProperty ;
+    rdfs:label "工单状态"@zh ;
+    rdfs:comment "待批准、已批准、执行中、已完成。"@zh ;
+    rdfs:domain grid:MaintenanceOrder ;
+    rdfs:range xsd:string .
+
+grid:plannedEnd a owl:DatatypeProperty ;
+    rdfs:label "计划结束"@zh ;
+    rdfs:comment "计划检修结束时间。"@zh ;
+    rdfs:domain grid:MaintenanceOrder ;
+    rdfs:range xsd:dateTime .
+
+grid:plannedStart a owl:DatatypeProperty ;
+    rdfs:label "计划开始"@zh ;
+    rdfs:comment "计划检修开始时间。"@zh ;
+    rdfs:domain grid:MaintenanceOrder ;
+    rdfs:range xsd:dateTime .
+
+grid:priority a owl:DatatypeProperty ;
+    rdfs:label "优先级"@zh ;
+    rdfs:comment "数值越小优先级越高。"@zh ;
+    rdfs:domain grid:MaintenanceOrder ;
+    rdfs:range xsd:integer .
+
+grid:ratedCapacityKW a owl:DatatypeProperty ;
+    rdfs:label "额定容量"@zh ;
+    grid:unit "kW" ;
+    rdfs:comment "馈线或配变的有功容量上限，过载判定的分母。演示数据按功率因数约 1 折算。"@zh ;
+    rdfs:domain grid:PowerEquipment ;
+    rdfs:range xsd:float .
+
+grid:servedByFeeder a owl:ObjectProperty ;
+    rdfs:label "由馈线供电"@zh ;
+    rdfs:comment "台区的供电馈线。一个台区只能由一条馈线供电。"@zh ;
+    rdfs:domain grid:TransformerDistrict ;
+    rdfs:range grid:Feeder .
+
+grid:targetsEquipment a owl:ObjectProperty ;
+    rdfs:label "检修设备"@zh ;
+    rdfs:comment "计划检修工单针对的设备，用于推算计划停电范围。"@zh ;
+    rdfs:domain grid:MaintenanceOrder ;
+    rdfs:range grid:PowerEquipment .
+
+grid:transferFrom a owl:ObjectProperty ;
+    rdfs:label "转出馈线"@zh ;
+    rdfs:comment "负荷转出方，即失电侧。"@zh ;
+    rdfs:domain grid:LoadTransferPlan ;
+    rdfs:range grid:Feeder .
+
+grid:transferTo a owl:ObjectProperty ;
+    rdfs:label "转入馈线"@zh ;
+    rdfs:comment "负荷转入方，即提供备用的健康馈线。"@zh ;
+    rdfs:domain grid:LoadTransferPlan ;
+    rdfs:range grid:Feeder .
+
+grid:triggersOutage a owl:ObjectProperty ;
+    rdfs:label "触发停电"@zh ;
+    rdfs:comment "故障引发的停电事件。"@zh ;
+    rdfs:domain grid:Fault ;
+    rdfs:range grid:OutageEvent .
+
+grid:viaSwitch a owl:ObjectProperty ;
+    rdfs:label "经由开关"@zh ;
+    rdfs:comment "执行转供所操作的联络开关。"@zh ;
+    rdfs:domain grid:LoadTransferPlan ;
+    rdfs:range grid:TieSwitch .
+
+grid:voltageLevelKV a owl:DatatypeProperty ;
+    rdfs:label "电压等级"@zh ;
+    grid:unit "kV" ;
+    rdfs:comment "额定电压等级。"@zh ;
+    rdfs:domain grid:PowerEquipment ;
+    rdfs:range xsd:float .
+
+grid:DeEnergizedEquipment a owl:Class ;
+    rdfs:label "失电设备"@zh ;
+    grid:isInferredClass true ;
+    rdfs:comment "物理上仍连接电网、但不存在带电路径的设备。由规则 R2 断言，与带电设备不相交。"@zh ;
+    rdfs:subClassOf grid:PowerEquipment .
+
+grid:EnergizedEquipment a owl:Class ;
+    rdfs:label "带电设备"@zh ;
+    grid:isInferredClass true ;
+    rdfs:comment "能从任一电源点经闭合开关取电的设备。由规则 R1 断言，不与失电设备共存。"@zh ;
+    rdfs:subClassOf grid:PowerEquipment ;
+    owl:disjointWith grid:DeEnergizedEquipment .
+
+grid:HeavyLoadTransformer a owl:Class ;
+    rdfs:label "重载配变"@zh ;
+    grid:isInferredClass true ;
+    rdfs:comment "负载率处于 80% 至 100% 之间的配变。由规则 R4 断言。"@zh ;
+    rdfs:subClassOf grid:DistributionTransformer .
+
+grid:LoadRecord a owl:Class ;
+    rdfs:label "负荷记录"@zh ;
+    rdfs:comment "配变或馈线在某时刻的负荷值，支持按时间断面做推理。"@zh ;
+    rdfs:subClassOf grid:Measurement .
+
+grid:MaintenanceTeam a owl:Class ;
+    rdfs:label "抢修班组"@zh ;
+    rdfs:comment "承担故障抢修与计划检修的作业单位，与检修工单存在派工关系。"@zh ;
+    rdfs:subClassOf grid:Entity .
+
+grid:Measurement a owl:Class ;
+    rdfs:label "量测"@zh ;
+    grid:isAbstract true ;
+    rdfs:comment "带时间戳的运行数据基类。"@zh ;
+    rdfs:subClassOf grid:Entity .
+
+grid:affectsDistrict a owl:ObjectProperty ;
+    rdfs:label "影响台区"@zh ;
+    rdfs:comment "停电事件波及的台区，是户数统计的入口。"@zh ;
+    rdfs:domain grid:OutageEvent ;
+    rdfs:range grid:TransformerDistrict .
+
+grid:affectsEquipment a owl:ObjectProperty ;
+    rdfs:label "影响设备"@zh ;
+    rdfs:comment "故障发生的设备位置，故障传播推理的起点。"@zh ;
+    rdfs:domain grid:Fault ;
+    rdfs:range grid:PowerEquipment .
+
+grid:connectsFeeder a owl:ObjectProperty ;
+    rdfs:label "联络馈线"@zh ;
+    rdfs:comment "联络开关所连接的两条馈线，数量必须恰好为 2，否则转供推理无从谈起。"@zh ;
+    rdfs:domain grid:TieSwitch ;
+    rdfs:range grid:Feeder .
+
+grid:downstreamOf a owl:ObjectProperty,
+        owl:TransitiveProperty ;
+    rdfs:label "下游于"@zh ;
+    rdfs:comment "upstreamOf 的逆关系，由推理机自动维护，无需手工断言。"@zh ;
+    rdfs:domain grid:PowerEquipment ;
+    rdfs:range grid:PowerEquipment ;
+    owl:inverseOf grid:upstreamOf .
+
+grid:hasFeeder a owl:ObjectProperty ;
+    rdfs:label "含馈线"@zh ;
+    rdfs:comment "belongsToSubstation 的逆关系。"@zh ;
+    rdfs:domain grid:Substation ;
+    rdfs:range grid:Feeder ;
+    owl:inverseOf grid:belongsToSubstation .
+
+grid:hasOperatingState a owl:FunctionalProperty,
+        owl:ObjectProperty ;
+    rdfs:label "运行状态"@zh ;
+    grid:axiomId "A9" ;
+    grid:rationale "一个开关不可能同时分合，保证带电判定不会自相矛盾。"@zh ;
+    rdfs:comment "开关当前的开/合状态。开关只允许有一个状态，这保证带电判定结果唯一。"@zh,
+        "开关状态唯一"@zh ;
+    rdfs:domain grid:Switch ;
+    rdfs:range grid:OperatingState .
+
+grid:hostsTransformer a owl:ObjectProperty ;
+    rdfs:label "挂接配变"@zh ;
+    rdfs:comment "locatedOn 的逆关系。"@zh ;
+    rdfs:domain grid:LineSection ;
+    rdfs:range grid:DistributionTransformer ;
+    owl:inverseOf grid:locatedOn .
+
+grid:normallyOpen a owl:DatatypeProperty ;
+    rdfs:label "常态分位"@zh ;
+    rdfs:comment "开关的正常运行位置。联络开关常态分为真，这是转供可行性的前提。"@zh ;
+    rdfs:domain grid:Switch ;
+    rdfs:range xsd:boolean .
+
+grid:supplies a owl:ObjectProperty ;
+    rdfs:label "供电给"@zh ;
+    rdfs:comment "台区对其范围内用户的供电关系。"@zh ;
+    rdfs:domain grid:TransformerDistrict ;
+    rdfs:range grid:Customer ;
+    owl:inverseOf grid:servedByDistrict .
+
+grid:transformerOfDistrict a owl:ObjectProperty ;
+    rdfs:label "所属台区"@zh ;
+    rdfs:comment "hasTransformer 的逆关系。"@zh ;
+    rdfs:domain grid:DistributionTransformer ;
+    rdfs:range grid:TransformerDistrict ;
+    owl:inverseOf grid:hasTransformer .
+
+grid:Area a owl:Class ;
+    rdfs:label "供电区域"@zh ;
+    grid:isAbstract true ;
+    rdfs:comment "按供电范围划分的地理/逻辑区域基类。"@zh ;
+    rdfs:subClassOf grid:Entity .
+
+grid:OverloadedTransformer a owl:Class ;
+    rdfs:label "过载配变"@zh ;
+    grid:isInferredClass true ;
+    rdfs:comment "负载率大于等于 100% 的配变。由规则 R4 断言，与重载配变不相交。"@zh ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            grid:axiomId "A14" ;
+            grid:rationale "把结论类锚定在设备本体上，使过载结论能顺藤摸到台区与用户。"@zh ;
+            rdfs:comment "过载配变必然是某台区的配变"@zh ;
+            owl:onProperty grid:hasTransformer ;
+            owl:someValuesFrom grid:DistributionTransformer ],
+        grid:DistributionTransformer ;
+    owl:disjointWith grid:HeavyLoadTransformer .
+
+grid:belongsToSubstation a owl:ObjectProperty ;
+    rdfs:label "所属变电站"@zh ;
+    rdfs:comment "馈线的电源变电站。每条馈线必须且只能属于一个变电站。"@zh ;
+    rdfs:domain grid:Feeder ;
+    rdfs:range grid:Substation ;
+    owl:inverseOf grid:hasFeeder .
+
+grid:locatedOn a owl:ObjectProperty ;
+    rdfs:label "装设于"@zh ;
+    rdfs:comment "配变挂接的线路段。配变必须且只能装设于一个线路段。"@zh ;
+    rdfs:domain grid:DistributionTransformer ;
+    rdfs:range grid:LineSection ;
+    owl:inverseOf grid:hostsTransformer .
+
+grid:servedByDistrict a owl:ObjectProperty ;
+    rdfs:label "由台区供电"@zh ;
+    rdfs:comment "supplies 的逆关系。用户必须且只能由一个台区供电。"@zh ;
+    rdfs:domain grid:Customer ;
+    rdfs:range grid:TransformerDistrict ;
+    owl:inverseOf grid:supplies .
+
+grid:LoadTransferPlan a owl:Class ;
+    rdfs:label "转供方案"@zh ;
+    rdfs:comment "推理产物之一，描述经哪台联络开关、把多少负荷从哪条馈线转移到哪条馈线。"@zh ;
+    rdfs:subClassOf grid:Event .
+
+grid:OperatingState a owl:Class ;
+    rdfs:label "运行状态"@zh ;
+    rdfs:comment "开关的开/合状态枚举。用个体（individual）而非字符串表达，使状态可被 OWL 分类。"@zh ;
+    rdfs:subClassOf grid:Entity .
+
+grid:hasTransformer a owl:ObjectProperty ;
+    rdfs:label "含配变"@zh ;
+    rdfs:comment "台区与配变的一对一关系。恰好 1 台的约束决定了「配变过载时台区内无备用配变可切」。"@zh ;
+    rdfs:domain grid:TransformerDistrict ;
+    rdfs:range grid:DistributionTransformer ;
+    owl:inverseOf grid:transformerOfDistrict .
+
+grid:Event a owl:Class ;
+    rdfs:label "事件"@zh ;
+    grid:isAbstract true ;
+    rdfs:comment "发生于电网上的非稳态事项基类。"@zh ;
+    rdfs:subClassOf grid:Entity .
+
+grid:OutageEvent a owl:Class ;
+    rdfs:label "停电事件"@zh ;
+    rdfs:comment "由故障、检修或操作引起的用户失电事实，记录影响台区与用户数。"@zh ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            grid:axiomId "A15" ;
+            grid:rationale "排除「零影响」的空事件，保证每条停电记录都可核算到户。"@zh ;
+            rdfs:comment "停电事件至少影响一个台区"@zh ;
+            owl:minQualifiedCardinality "1"^^xsd:nonNegativeInteger ;
+            owl:onClass grid:TransformerDistrict ;
+            owl:onProperty grid:affectsDistrict ],
+        grid:Event .
+
+grid:Substation a owl:Class ;
+    rdfs:label "变电站"@zh ;
+    rdfs:comment "电源点。配电网的供电源头，其 10kV 母线是馈线的起点。"@zh ;
+    rdfs:subClassOf grid:PowerEquipment .
+
+grid:TieSwitch a owl:Class ;
+    rdfs:label "联络开关"@zh ;
+    rdfs:comment "连接两条馈线的开关，正常处于分位，是负荷转供的唯一通道。"@zh ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            grid:axiomId "A8" ;
+            grid:rationale "区分「常态运行方式」与「当前状态」，转供方案本质上是打破常态分位的有意操作。"@zh ;
+            rdfs:comment "联络开关常态处于分位"@zh ;
+            owl:hasValue true ;
+            owl:onProperty grid:normallyOpen ],
+        [ a owl:Restriction ;
+            grid:axiomId "A7" ;
+            grid:rationale "转供推理要求联络点两侧都有明确的馈线与容量，连接数不足即判定为数据质量问题。"@zh ;
+            rdfs:comment "联络开关必须恰好连接两条馈线"@zh ;
+            owl:onClass grid:Feeder ;
+            owl:onProperty grid:connectsFeeder ;
+            owl:qualifiedCardinality "2"^^xsd:nonNegativeInteger ],
+        grid:Switch .
+
+grid:LineSection a owl:Class ;
+    rdfs:label "线路段"@zh ;
+    rdfs:comment "馈线被开关分隔后的一个电气连通段。开关断开即把线路切成互不导通的段。"@zh ;
+    rdfs:subClassOf grid:PowerEquipment .
+
+grid:upstreamOf a owl:ObjectProperty,
+        owl:TransitiveProperty ;
+    rdfs:label "上游于"@zh ;
+    grid:axiomId "A1",
+        "A16",
+        "A2" ;
+    grid:rationale "与 A1 互为表里，展示 OWL 2 属性链写法，兼容不支持传递性的推理机。"@zh,
+        "使「S1 断开则其下游全部失电」可以由 OWL 推理机沿链路自动展开，无需为每个末端设备手工断言。"@zh,
+        "只断言一次上游关系，下游关系由推理机自动补齐，避免双方不一致。"@zh ;
+    rdfs:comment "上下游互为逆关系"@zh,
+        "上下游关系具有传递性"@zh,
+        "上游链的复合仍为上游"@zh,
+        "电气上游关系。可传递是故障传播推理的关键：S1 的上游是变电站，则 S1 下游的一切都处在变电站下游。"@zh ;
+    rdfs:domain grid:PowerEquipment ;
+    rdfs:range grid:PowerEquipment ;
+    owl:inverseOf grid:downstreamOf ;
+    owl:propertyChainAxiom ( grid:upstreamOf grid:upstreamOf ) .
+
+grid:Customer a owl:Class ;
+    rdfs:label "用户"@zh ;
+    grid:isAbstract true ;
+    rdfs:comment "用电主体基类。用户必须且只能由一个台区供电，该约束是影响范围推理的基础。"@zh ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            grid:axiomId "A6" ;
+            grid:rationale "影响户数统计不会重复计数，也不会漏计。"@zh ;
+            rdfs:comment "每个用户必须且只能由一个台区供电"@zh ;
+            owl:onClass grid:TransformerDistrict ;
+            owl:onProperty grid:servedByDistrict ;
+            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
+        grid:Entity .
+
+grid:Fault a owl:Class ;
+    rdfs:label "故障"@zh ;
+    rdfs:comment "设备失效或异常，是故障传播推理的起点。"@zh ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            grid:axiomId "A10" ;
+            grid:rationale "故障传播必须以唯一设备为起点，否则影响范围无法收敛。"@zh ;
+            rdfs:comment "每个故障必须且只能定位到一个设备"@zh ;
+            owl:onClass grid:PowerEquipment ;
+            owl:onProperty grid:affectsEquipment ;
+            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
+        grid:Event .
+
+grid:MaintenanceOrder a owl:Class ;
+    rdfs:label "检修工单"@zh ;
+    rdfs:comment "计划检修或故障抢修的任务单，关联被检修设备与执行班组。"@zh ;
+    rdfs:subClassOf grid:Event .
+
+grid:Entity a owl:Class ;
+    rdfs:label "实体"@zh ;
+    grid:isAbstract true ;
+    rdfs:comment "领域内一切对象的根类，所有类均直接或间接继承自它。"@zh .
+
+grid:Switch a owl:Class ;
+    rdfs:label "开关设备"@zh ;
+    grid:isAbstract true ;
+    rdfs:comment "可开断电气连通的设备基类，具有运行状态（合/分），是拓扑变化的唯一来源。"@zh ;
+    rdfs:subClassOf grid:PowerEquipment .
+
+grid:DistributionTransformer a owl:Class ;
+    rdfs:label "配电变压器"@zh ;
+    rdfs:comment "10kV/0.4kV 降压设备，其额定容量与实时负荷是过载判定的依据。"@zh ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            grid:axiomId "A4" ;
+            grid:rationale "配变位置唯一，失电判定的传播路径才唯一。"@zh ;
+            rdfs:comment "每台配变必须且只能装设于一个线路段"@zh ;
+            owl:onClass grid:LineSection ;
+            owl:onProperty grid:locatedOn ;
+            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
+        grid:PowerEquipment .
+
+grid:Feeder a owl:Class ;
+    rdfs:label "馈线"@zh ;
+    rdfs:comment "由变电站 10kV 母线引出的配电线路，具有额定容量与实时负荷，是负荷转移的基本单位。"@zh ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            grid:axiomId "A3" ;
+            grid:rationale "保证馈线有唯一电源点，否则失电判定会出现多条供电路径，结论不唯一。"@zh ;
+            rdfs:comment "每条馈线必须且只能属于一个变电站"@zh ;
+            owl:onClass grid:Substation ;
+            owl:onProperty grid:belongsToSubstation ;
+            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
+        grid:PowerEquipment .
+
+grid:TransformerDistrict a owl:Class ;
+    rdfs:label "台区"@zh ;
+    rdfs:comment "一台配变及其低压供电范围构成的整体，是停电影响分析中「户数」的统计单元。"@zh ;
+    rdfs:subClassOf [ a owl:Restriction ;
+            grid:axiomId "A5" ;
+            grid:rationale "该约束直接推出「台区内无第二台配变可切」，是配变过载只能靠切负荷解决的原因。"@zh ;
+            rdfs:comment "每个台区恰好含一台配变"@zh ;
+            owl:onClass grid:DistributionTransformer ;
+            owl:onProperty grid:hasTransformer ;
+            owl:qualifiedCardinality "1"^^xsd:nonNegativeInteger ],
+        grid:Area .
+
+grid:PowerEquipment a owl:Class ;
+    rdfs:label "电力设备"@zh ;
+    grid:isAbstract true ;
+    rdfs:comment "一次设备基类。凡具有电气位置、可被带电状态描述的实体均归入此类。"@zh ;
+    rdfs:subClassOf grid:Entity .
+
+[] rdfs:label "每个用户必须且只能由一个台区供电"@zh ;
+    grid:appliesTo grid:Customer ;
+    grid:axiomId "A6" ;
+    grid:axiomType "qualified_cardinality" ;
+    grid:rationale "影响户数统计不会重复计数，也不会漏计。"@zh .
+
+[] rdfs:label "上游链的复合仍为上游"@zh ;
+    grid:appliesTo grid:upstreamOf ;
+    grid:axiomId "A16" ;
+    grid:axiomType "property_chain" ;
+    grid:rationale "与 A1 互为表里，展示 OWL 2 属性链写法，兼容不支持传递性的推理机。"@zh .
+
+[] rdfs:label "联络开关常态处于分位"@zh ;
+    grid:appliesTo grid:TieSwitch ;
+    grid:axiomId "A8" ;
+    grid:axiomType "subclass_value" ;
+    grid:rationale "区分「常态运行方式」与「当前状态」，转供方案本质上是打破常态分位的有意操作。"@zh .
+
+[] rdfs:label "每台配变必须且只能装设于一个线路段"@zh ;
+    grid:appliesTo grid:DistributionTransformer ;
+    grid:axiomId "A4" ;
+    grid:axiomType "qualified_cardinality" ;
+    grid:rationale "配变位置唯一，失电判定的传播路径才唯一。"@zh .
+
+[] a owl:AllDisjointClasses ;
+    grid:axiomId "A11" ;
+    grid:rationale "支撑一致性检查：同一设备不会被同时判定为两类，数据录入错误可被推理机发现。"@zh ;
+    rdfs:comment "五类一次设备两两不相交"@zh ;
+    owl:members ( grid:Substation grid:Feeder grid:LineSection grid:Switch grid:DistributionTransformer ) .
+
+[] rdfs:label "每条馈线必须且只能属于一个变电站"@zh ;
+    grid:appliesTo grid:Feeder ;
+    grid:axiomId "A3" ;
+    grid:axiomType "qualified_cardinality" ;
+    grid:rationale "保证馈线有唯一电源点，否则失电判定会出现多条供电路径，结论不唯一。"@zh .
+
+[] rdfs:label "五类一次设备两两不相交"@zh ;
+    grid:axiomId "A11" ;
+    grid:axiomType "all_disjoint" ;
+    grid:rationale "支撑一致性检查：同一设备不会被同时判定为两类，数据录入错误可被推理机发现。"@zh .
+
+[] rdfs:label "过载与重载互斥"@zh ;
+    grid:appliesTo grid:OverloadedTransformer ;
+    grid:axiomId "A13" ;
+    grid:axiomType "disjoint_with" ;
+    grid:rationale "负载率只能落在一个区间，避免同一台配变被同时归入两类。"@zh .
+
+[] rdfs:label "上下游互为逆关系"@zh ;
+    grid:appliesTo grid:upstreamOf ;
+    grid:axiomId "A2" ;
+    grid:axiomType "inverse" ;
+    grid:rationale "只断言一次上游关系，下游关系由推理机自动补齐，避免双方不一致。"@zh .
+
+[] rdfs:label "联络开关必须恰好连接两条馈线"@zh ;
+    grid:appliesTo grid:TieSwitch ;
+    grid:axiomId "A7" ;
+    grid:axiomType "qualified_cardinality" ;
+    grid:rationale "转供推理要求联络点两侧都有明确的馈线与容量，连接数不足即判定为数据质量问题。"@zh .
+
+[] rdfs:label "每个故障必须且只能定位到一个设备"@zh ;
+    grid:appliesTo grid:Fault ;
+    grid:axiomId "A10" ;
+    grid:axiomType "qualified_cardinality" ;
+    grid:rationale "故障传播必须以唯一设备为起点，否则影响范围无法收敛。"@zh .
+
+[] rdfs:label "上下游关系具有传递性"@zh ;
+    grid:appliesTo grid:upstreamOf ;
+    grid:axiomId "A1" ;
+    grid:axiomType "transitive" ;
+    grid:rationale "使「S1 断开则其下游全部失电」可以由 OWL 推理机沿链路自动展开，无需为每个末端设备手工断言。"@zh .
+
+[] rdfs:label "每个台区恰好含一台配变"@zh ;
+    grid:appliesTo grid:TransformerDistrict ;
+    grid:axiomId "A5" ;
+    grid:axiomType "qualified_cardinality" ;
+    grid:rationale "该约束直接推出「台区内无第二台配变可切」，是配变过载只能靠切负荷解决的原因。"@zh .
+
+[] rdfs:label "带电设备与失电设备不相交"@zh ;
+    grid:appliesTo grid:EnergizedEquipment ;
+    grid:axiomId "A12" ;
+    grid:axiomType "disjoint_with" ;
+    grid:rationale "规则层断言结论后，由 OWL 校验同一设备不会既带电又失电，这是推理结果的自检机制。"@zh .
+
+[] rdfs:label "开关状态唯一"@zh ;
+    grid:appliesTo grid:hasOperatingState ;
+    grid:axiomId "A9" ;
+    grid:axiomType "functional" ;
+    grid:rationale "一个开关不可能同时分合，保证带电判定不会自相矛盾。"@zh .
+
+[] rdfs:label "停电事件至少影响一个台区"@zh ;
+    grid:appliesTo grid:OutageEvent ;
+    grid:axiomId "A15" ;
+    grid:axiomType "qualified_cardinality" ;
+    grid:rationale "排除「零影响」的空事件，保证每条停电记录都可核算到户。"@zh .
+
+[] rdfs:label "过载配变必然是某台区的配变"@zh ;
+    grid:appliesTo grid:OverloadedTransformer ;
+    grid:axiomId "A14" ;
+    grid:axiomType "subclass_restriction" ;
+    grid:rationale "把结论类锚定在设备本体上，使过载结论能顺藤摸到台区与用户。"@zh .
+

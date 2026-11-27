@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>配电网本体模型与知识推理</title>
+<link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">配</div>
+      <div class="brand-text">
+        <div class="brand-title">配电网本体推理</div>
+        <div class="brand-sub">Grid Ontology</div>
+      </div>
+    </div>
+    <nav class="nav">
+      <button class="nav-item is-active" data-view="ontology">
+        <span class="nav-icon"></span>本体模型
+      </button>
+      <button class="nav-item" data-view="topology">
+        <span class="nav-icon"></span>电网拓扑
+      </button>
+      <button class="nav-item" data-view="sparql">
+        <span class="nav-icon"></span>图谱查询
+      </button>
+      <button class="nav-item" data-view="ingest">
+        <span class="nav-icon"></span>数据接入
+      </button>
+      <button class="nav-item" data-view="chat">
+        <span class="nav-icon"></span>智能问答
+      </button>
+      <button class="nav-item" data-view="verify">
+        <span class="nav-icon"></span>规则验证
+      </button>
+      <button class="nav-item" data-view="audit">
+        <span class="nav-icon"></span>运行审计
+      </button>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="model-chip" id="modelChip">
+        <span class="dot"></span><span id="modelText">正在连接…</span>
+      </div>
+      <div class="foot-note">OWL 2 · rdflib · owlrl</div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1 id="pageTitle">本体模型</h1>
+        <p id="pageSub">领域概念、属性与公理</p>
+      </div>
+      <div class="topbar-right">
+        <span class="badge" id="censusBadge">—</span>
+      </div>
+    </header>
+
+    <!-- ================= 本体模型 ================= -->
+    <section class="view is-active" id="view-ontology">
+      <div class="stat-row">
+        <div class="stat"><div class="stat-num" id="statClasses">—</div><div class="stat-label">核心类</div></div>
+        <div class="stat"><div class="stat-num" id="statObjProps">—</div><div class="stat-label">对象属性</div></div>
+        <div class="stat"><div class="stat-num" id="statDataProps">—</div><div class="stat-label">数据属性</div></div>
+        <div class="stat"><div class="stat-num" id="statAxioms">—</div><div class="stat-label">公理</div></div>
+        <div class="stat"><div class="stat-num" id="statRules">—</div><div class="stat-label">推理规则</div></div>
+      </div>
+
+      <div class="version-bar" id="ontoVersion">—</div>
+
+      <div class="split">
+        <div class="card chart-card">
+          <div class="card-head">
+            <h2>类与关系图</h2>
+            <label class="check">
+              <input type="checkbox" id="toggleProps">
+              <span>显示对象属性</span>
+            </label>
+          </div>
+          <div class="chart" id="ontoChart"></div>
+          <div class="hint">点击任意类查看属性、公理与实例；滚轮缩放，拖拽平移</div>
+        </div>
+
+        <aside class="card detail-card" id="classDetail">
+          <div class="detail-empty">选择左侧的类，查看它的定义与约束</div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ================= 电网拓扑 ================= -->
+    <section class="view" id="view-topology">
+      <div class="split">
+        <div class="card chart-card">
+          <div class="card-head">
+            <h2>配电网单线图</h2>
+            <div class="btn-group scenario-bar" id="scenarioBar">
+              <button class="btn" data-scenario="s1">S1 断开</button>
+              <button class="btn" data-scenario="br1">F01 出口跳闸</button>
+              <button class="btn" data-scenario="peak">F02 高峰转供</button>
+              <button class="btn" data-scenario="reset">恢复运行</button>
+            </div>
+          </div>
+          <div class="topo-wrap">
+            <svg id="topoSvg" viewBox="0 0 1000 620" preserveAspectRatio="xMidYMid meet"></svg>
+          </div>
+          <div class="legend">
+            <span><i class="lg lg-live"></i>带电</span>
+            <span><i class="lg lg-dead"></i>失电</span>
+            <span><i class="lg lg-over"></i>过载配变</span>
+            <span><i class="lg lg-open"></i>开关分位</span>
+            <span class="legend-note">点击开关可模拟分合闸</span>
+          </div>
+        </div>
+
+        <aside class="side-col">
+          <div class="card">
+            <div class="card-head"><h2>当前工况</h2></div>
+            <div class="impact" id="impact">
+              <div class="impact-num"><span id="impactHouseholds">0</span><em>户失电</em></div>
+              <div class="impact-sub" id="impactRatio">全网 2440 户</div>
+              <div class="bars" id="impactBars"></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h2>失电台区</h2></div>
+            <div class="list" id="districtList"><div class="list-empty">当前无失电台区</div></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h2>处置建议</h2></div>
+            <div class="advice" id="advice">—</div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ================= 图谱查询 ================= -->
+    <section class="view" id="view-sparql">
+      <div class="split sparql-split">
+        <div class="card chart-card">
+          <div class="card-head">
+            <h2>SPARQL 查询</h2>
+            <div class="btn-group">
+              <span class="muted" id="sparqlStats">—</span>
+              <button class="btn" id="runSparql">执行查询</button>
+            </div>
+          </div>
+          <div class="editor-wrap">
+            <textarea id="sparqlInput" spellcheck="false" autocomplete="off"></textarea>
+          </div>
+          <div class="sparql-bar">
+            <span class="muted">只读接口：仅允许 SELECT / ASK / CONSTRUCT / DESCRIBE，写操作会被拒绝</span>
+            <span class="muted" id="sparqlMeta"></span>
+          </div>
+          <div class="result-wrap" id="sparqlResult">
+            <div class="list-empty">执行一条查询后，结果在这里以表格呈现</div>
+          </div>
+        </div>
+
+        <aside class="card example-card">
+          <div class="card-head"><h2>示例查询</h2><span class="muted">点击载入</span></div>
+          <div class="examples" id="sparqlExamples"></div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ================= 数据接入 ================= -->
+    <section class="view" id="view-ingest">
+      <div class="card">
+        <div class="card-head">
+          <h2>台账接入与治理</h2>
+          <div class="btn-group">
+            <button class="btn btn-ghost" id="loadSample">载入示例台账</button>
+            <button class="btn" id="runIngest">开始校验</button>
+          </div>
+        </div>
+        <div class="upload-row">
+          <label class="upload-box" id="boxLedger">
+            <input type="file" accept=".csv,.txt" id="fileLedger" hidden>
+            <div class="upload-title">设备台账 CSV</div>
+            <div class="upload-hint" id="hintLedger">点击选择，或把文件拖进来</div>
+          </label>
+          <label class="upload-box" id="boxTopology">
+            <input type="file" accept=".csv,.txt" id="fileTopology" hidden>
+            <div class="upload-title">拓扑关系 CSV<span class="opt">可选</span></div>
+            <div class="upload-hint" id="hintTopology">起点设备 / 终点设备 / 连接开关</div>
+          </label>
+          <div class="upload-note">
+            自动识别 UTF-8 与 GBK 编码；列名支持别名（配变／配电变压器／公用变压器）。
+            <br><span class="muted">校验只做检查与三元组预览，不会改动演示环境的运行数据。</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="ingestReportCard" hidden>
+        <div class="card-head">
+          <h2>治理报告</h2>
+          <span class="muted" id="ingestReady"></span>
+        </div>
+        <div class="verify-summary" id="ingestSummary">—</div>
+        <div class="ingest-grid">
+          <div class="ingest-col">
+            <div class="detail-section"><h4>列映射结果</h4><div class="map-list" id="ingestMapping"></div></div>
+            <div class="detail-section"><h4>设备类型分布</h4><div class="tag-row" id="ingestTypes"></div></div>
+          </div>
+          <div class="ingest-col">
+            <div class="detail-section"><h4>问题清单</h4><div class="issue-list" id="ingestIssues"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="ingestTtlCard" hidden>
+        <div class="card-head">
+          <h2>三元组预览</h2>
+          <div class="btn-group">
+            <span class="muted" id="ingestTtlMeta"></span>
+            <button class="btn btn-ghost" id="copyTtl">复制</button>
+          </div>
+        </div>
+        <pre class="ttl-preview" id="ingestTtl"></pre>
+      </div>
+    </section>
+
+    <!-- ================= 智能问答 ================= -->
+    <section class="view" id="view-chat">
+      <div class="split chat-split">
+        <div class="card chat-card">
+          <div class="messages" id="messages">
+            <div class="msg msg-bot">
+              <div class="msg-role">推理助手</div>
+              <div class="msg-body">我可以回答配电网的推理性问题，例如：开关断开后哪些用户失电、能否转供、哪些配变过载。<br>所有数字来自本体推理引擎，可以逐条核对。</div>
+            </div>
+          </div>
+          <div class="chips" id="chips">
+            <button class="chip">S1 断开后哪些用户失电？</button>
+            <button class="chip">S1 断开能通过联络开关转供多少户？</button>
+            <button class="chip">当前哪些配变过载或重载？</button>
+            <button class="chip">检修工单 GD-2026-018 影响多少户？</button>
+            <button class="chip">配变B过载了应该切到哪条备用线路？</button>
+            <button class="chip">这个本体有哪些类和公理？</button>
+          </div>
+          <form class="composer" id="chatForm">
+            <input id="chatInput" placeholder="输入问题，回车发送" autocomplete="off">
+            <button type="submit" id="sendBtn">发送</button>
+          </form>
+        </div>
+
+        <aside class="card trace-card">
+          <div class="card-head"><h2>推理链</h2><span class="muted" id="traceMeta">—</span></div>
+          <div class="trace" id="trace">
+            <div class="list-empty">提问后在这里显示每一步推理依据</div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- ================= 规则验证 ================= -->
+    <section class="view" id="view-verify">
+      <div class="card">
+        <div class="card-head">
+          <h2>推理验证</h2>
+          <div class="btn-group">
+            <button class="btn" id="runVerify">重新验证</button>
+            <button class="btn btn-ghost" id="runOwl">OWL 一致性自检</button>
+          </div>
+        </div>
+        <div class="verify-summary" id="verifySummary">—</div>
+        <div class="verify-list" id="verifyList"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head">
+          <h2>阈值配置</h2>
+          <div class="btn-group">
+            <span class="muted" id="thresholdSource">—</span>
+            <button class="btn btn-ghost" id="resetThresholds">恢复基线</button>
+          </div>
+        </div>
+        <div class="threshold-note" id="thresholdNote"></div>
+        <div class="threshold-list" id="thresholdList"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><h2>推理规则（12 条）</h2><span class="muted">规则编号与设计文档、代码一一对应</span></div>
+        <div class="table-wrap"><table class="table" id="rulesTable"></table></div>
+      </div>
+    </section>
+
+    <!-- ================= 运行审计 ================= -->
+    <section class="view" id="view-audit">
+      <div class="card">
+        <div class="card-head">
+          <h2>运行审计</h2>
+          <div class="btn-group">
+            <button class="btn btn-ghost" id="refreshAudit">刷新</button>
+            <button class="btn btn-ghost" id="clearAudit">清空记录</button>
+          </div>
+        </div>
+        <div class="stat-row audit-stats">
+          <div class="stat"><div class="stat-num" id="auditTotal">—</div><div class="stat-label">累计记录</div></div>
+          <div class="stat"><div class="stat-num" id="auditFailed">—</div><div class="stat-label">失败次数</div></div>
+          <div class="stat"><div class="stat-num" id="auditKinds">—</div><div class="stat-label">记录类型</div></div>
+          <div class="stat"><div class="stat-num" id="auditRules">—</div><div class="stat-label">命中规则</div></div>
+        </div>
+        <div class="audit-note" id="auditNote">—</div>
+        <div class="table-wrap"><table class="table" id="auditTable"></table></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script src="/static/vendor/echarts.min.js"></script>
+<script src="/static/app.js"></script>
+</body>
+</html>

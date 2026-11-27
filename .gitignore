@@ -1,0 +1,24 @@
+# 环境与密钥
+.env
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# 运行产物
+output/
+data/audit.jsonl
+data/audit.jsonl.1
+
+# 本地工具与工作区（与本项目源码无关）
+.workbuddy/
+.playwright-cli/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

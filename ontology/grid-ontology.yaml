@@ -1,0 +1,627 @@
+meta:
+  name: 配电网本体模型
+  short_name: GridOntology
+  prefix: grid
+  base_uri: "http://grid.ontology.local/onto#"
+  version: "1.0.0"
+  description: >-
+    面向配电网运行与调度的领域本体，用于支撑故障传播、过载判定、负荷转供等推理性问题。
+    类与属性的命名对齐 IEC 61970 CIM 的常用术语，但为教学与验证场景做了裁剪。
+  author: 配电网本体与知识推理项目组
+  standards:
+    - "OWL 2 (W3C Recommendation)"
+    - "RDFS (W3C Recommendation)"
+    - "命名参考 IEC 61970 CIM / Q/GDW 703 配电自动化系统技术规范"
+
+# ============================================================
+# 类（Class）：27 个，最深三层继承（Entity > PowerEquipment > Switch > SectionSwitch）
+# ============================================================
+classes:
+  # --- 顶层 ---
+  - name: Entity
+    label: 实体
+    parent: null
+    abstract: true
+    comment: 领域内一切对象的根类，所有类均直接或间接继承自它。
+
+  # --- 设备分支 ---
+  - name: PowerEquipment
+    label: 电力设备
+    parent: Entity
+    abstract: true
+    comment: 一次设备基类。凡具有电气位置、可被带电状态描述的实体均归入此类。
+
+  - name: Substation
+    label: 变电站
+    parent: PowerEquipment
+    comment: 电源点。配电网的供电源头，其 10kV 母线是馈线的起点。
+
+  - name: Feeder
+    label: 馈线
+    parent: PowerEquipment
+    comment: 由变电站 10kV 母线引出的配电线路，具有额定容量与实时负荷，是负荷转移的基本单位。
+
+  - name: LineSection
+    label: 线路段
+    parent: PowerEquipment
+    comment: 馈线被开关分隔后的一个电气连通段。开关断开即把线路切成互不导通的段。
+
+  - name: Switch
+    label: 开关设备
+    parent: PowerEquipment
+    abstract: true
+    comment: 可开断电气连通的设备基类，具有运行状态（合/分），是拓扑变化的唯一来源。
+
+  - name: SectionSwitch
+    label: 分段开关
+    parent: Switch
+    comment: 装设于馈线主干或分支上的开关，用于分段隔离故障，正常运行状态为合。
+
+  - name: TieSwitch
+    label: 联络开关
+    parent: Switch
+    comment: 连接两条馈线的开关，正常处于分位，是负荷转供的唯一通道。
+
+  - name: Breaker
+    label: 断路器
+    parent: Switch
+    comment: 具备故障电流开断能力的开关，通常位于变电站出线或分段点。
+
+  - name: DistributionTransformer
+    label: 配电变压器
+    parent: PowerEquipment
+    comment: 10kV/0.4kV 降压设备，其额定容量与实时负荷是过载判定的依据。
+
+  - name: MaintenanceTeam
+    label: 抢修班组
+    parent: Entity
+    comment: 承担故障抢修与计划检修的作业单位，与检修工单存在派工关系。
+
+  # --- 区域分支 ---
+  - name: Area
+    label: 供电区域
+    parent: Entity
+    abstract: true
+    comment: 按供电范围划分的地理/逻辑区域基类。
+
+  - name: TransformerDistrict
+    label: 台区
+    parent: Area
+    comment: 一台配变及其低压供电范围构成的整体，是停电影响分析中「户数」的统计单元。
+
+  # --- 用户分支 ---
+  - name: Customer
+    label: 用户
+    parent: Entity
+    abstract: true
+    comment: 用电主体基类。用户必须且只能由一个台区供电，该约束是影响范围推理的基础。
+
+  - name: ResidentialCustomer
+    label: 居民用户
+    parent: Customer
+    comment: 居民小区、散户等生活用电主体。
+
+  - name: CommercialCustomer
+    label: 工商业用户
+    parent: Customer
+    comment: 工厂、商场、写字楼等经营性用电主体，通常对停电更敏感。
+
+  # --- 事件分支 ---
+  - name: Event
+    label: 事件
+    parent: Entity
+    abstract: true
+    comment: 发生于电网上的非稳态事项基类。
+
+  - name: Fault
+    label: 故障
+    parent: Event
+    comment: 设备失效或异常，是故障传播推理的起点。
+
+  - name: OutageEvent
+    label: 停电事件
+    parent: Event
+    comment: 由故障、检修或操作引起的用户失电事实，记录影响台区与用户数。
+
+  - name: MaintenanceOrder
+    label: 检修工单
+    parent: Event
+    comment: 计划检修或故障抢修的任务单，关联被检修设备与执行班组。
+
+  - name: LoadTransferPlan
+    label: 转供方案
+    parent: Event
+    comment: 推理产物之一，描述经哪台联络开关、把多少负荷从哪条馈线转移到哪条馈线。
+
+  # --- 量测分支 ---
+  - name: Measurement
+    label: 量测
+    parent: Entity
+    abstract: true
+    comment: 带时间戳的运行数据基类。
+
+  - name: LoadRecord
+    label: 负荷记录
+    parent: Measurement
+    comment: 配变或馈线在某时刻的负荷值，支持按时间断面做推理。
+
+  # --- 状态分支 ---
+  - name: OperatingState
+    label: 运行状态
+    parent: Entity
+    comment: 开关的开/合状态枚举。用个体（individual）而非字符串表达，使状态可被 OWL 分类。
+
+  # --- 推理结论类（由规则层断言，OWL 负责一致性检查） ---
+  - name: EnergizedEquipment
+    label: 带电设备
+    parent: PowerEquipment
+    inferred: true
+    comment: 能从任一电源点经闭合开关取电的设备。由规则 R1 断言，不与失电设备共存。
+
+  - name: DeEnergizedEquipment
+    label: 失电设备
+    parent: PowerEquipment
+    inferred: true
+    comment: 物理上仍连接电网、但不存在带电路径的设备。由规则 R2 断言，与带电设备不相交。
+
+  - name: OverloadedTransformer
+    label: 过载配变
+    parent: DistributionTransformer
+    inferred: true
+    comment: 负载率大于等于 100% 的配变。由规则 R4 断言，与重载配变不相交。
+
+  - name: HeavyLoadTransformer
+    label: 重载配变
+    parent: DistributionTransformer
+    inferred: true
+    comment: 负载率处于 80% 至 100% 之间的配变。由规则 R4 断言。
+
+# ============================================================
+# 对象属性（Object Property）：19 个
+# ============================================================
+object_properties:
+  - name: upstreamOf
+    label: 上游于
+    domain: PowerEquipment
+    range: PowerEquipment
+    inverse: downstreamOf
+    transitive: true
+    comment: 电气上游关系。可传递是故障传播推理的关键：S1 的上游是变电站，则 S1 下游的一切都处在变电站下游。
+
+  - name: downstreamOf
+    label: 下游于
+    domain: PowerEquipment
+    range: PowerEquipment
+    inverse: upstreamOf
+    transitive: true
+    comment: upstreamOf 的逆关系，由推理机自动维护，无需手工断言。
+
+  - name: belongsToFeeder
+    label: 所属馈线
+    domain: PowerEquipment
+    range: Feeder
+    comment: 设备归属的馈线。线路段与配变必须且只能属于一条馈线。
+
+  - name: hasSection
+    label: 含线路段
+    domain: Feeder
+    range: LineSection
+    comment: 馈线包含的线路段集合。与 belongsToFeeder 语义相关但值域不同（后者覆盖全部设备），故不声明为逆属性。
+
+  - name: locatedOn
+    label: 装设于
+    domain: DistributionTransformer
+    range: LineSection
+    inverse: hostsTransformer
+    comment: 配变挂接的线路段。配变必须且只能装设于一个线路段。
+
+  - name: hostsTransformer
+    inverse: locatedOn
+    label: 挂接配变
+    domain: LineSection
+    range: DistributionTransformer
+    comment: locatedOn 的逆关系。
+
+  - name: connectsFrom
+    label: 连接端一
+    domain: Switch
+    range: PowerEquipment
+    comment: 开关的物理连接端之一，与 connectsTo 共同确定开关在拓扑中的位置。
+
+  - name: connectsTo
+    label: 连接端二
+    domain: Switch
+    range: PowerEquipment
+    comment: 开关的物理连接端之二。
+
+  - name: belongsToSubstation
+    label: 所属变电站
+    domain: Feeder
+    range: Substation
+    inverse: hasFeeder
+    comment: 馈线的电源变电站。每条馈线必须且只能属于一个变电站。
+
+  - name: hasFeeder
+    inverse: belongsToSubstation
+    label: 含馈线
+    domain: Substation
+    range: Feeder
+    comment: belongsToSubstation 的逆关系。
+
+  - name: connectsFeeder
+    label: 联络馈线
+    domain: TieSwitch
+    range: Feeder
+    comment: 联络开关所连接的两条馈线，数量必须恰好为 2，否则转供推理无从谈起。
+
+  - name: servedByFeeder
+    label: 由馈线供电
+    domain: TransformerDistrict
+    range: Feeder
+    comment: 台区的供电馈线。一个台区只能由一条馈线供电。
+
+  - name: hasTransformer
+    label: 含配变
+    domain: TransformerDistrict
+    range: DistributionTransformer
+    inverse: transformerOfDistrict
+    comment: 台区与配变的一对一关系。恰好 1 台的约束决定了「配变过载时台区内无备用配变可切」。
+
+  - name: transformerOfDistrict
+    inverse: hasTransformer
+    label: 所属台区
+    domain: DistributionTransformer
+    range: TransformerDistrict
+    comment: hasTransformer 的逆关系。
+
+  - name: supplies
+    label: 供电给
+    domain: TransformerDistrict
+    range: Customer
+    inverse: servedByDistrict
+    comment: 台区对其范围内用户的供电关系。
+
+  - name: servedByDistrict
+    inverse: supplies
+    label: 由台区供电
+    domain: Customer
+    range: TransformerDistrict
+    comment: supplies 的逆关系。用户必须且只能由一个台区供电。
+
+  - name: hasOperatingState
+    label: 运行状态
+    domain: Switch
+    range: OperatingState
+    functional: true
+    comment: 开关当前的开/合状态。开关只允许有一个状态，这保证带电判定结果唯一。
+
+  - name: affectsEquipment
+    label: 影响设备
+    domain: Fault
+    range: PowerEquipment
+    comment: 故障发生的设备位置，故障传播推理的起点。
+
+  - name: triggersOutage
+    label: 触发停电
+    domain: Fault
+    range: OutageEvent
+    comment: 故障引发的停电事件。
+
+  - name: affectsDistrict
+    label: 影响台区
+    domain: OutageEvent
+    range: TransformerDistrict
+    comment: 停电事件波及的台区，是户数统计的入口。
+
+  - name: affectsCustomer
+    label: 影响用户
+    domain: OutageEvent
+    range: Customer
+    comment: 停电事件波及的用户实体。
+
+  - name: handlesFault
+    label: 处理故障
+    domain: MaintenanceOrder
+    range: Fault
+    comment: 工单对应的故障对象。
+
+  - name: targetsEquipment
+    label: 检修设备
+    domain: MaintenanceOrder
+    range: PowerEquipment
+    comment: 计划检修工单针对的设备，用于推算计划停电范围。
+
+  - name: assignedToTeam
+    label: 指派班组
+    domain: MaintenanceOrder
+    range: MaintenanceTeam
+    comment: 工单的执行班组。
+
+  - name: transferFrom
+    label: 转出馈线
+    domain: LoadTransferPlan
+    range: Feeder
+    comment: 负荷转出方，即失电侧。
+
+  - name: transferTo
+    label: 转入馈线
+    domain: LoadTransferPlan
+    range: Feeder
+    comment: 负荷转入方，即提供备用的健康馈线。
+
+  - name: viaSwitch
+    label: 经由开关
+    domain: LoadTransferPlan
+    range: TieSwitch
+    comment: 执行转供所操作的联络开关。
+
+  - name: hasLoadRecord
+    label: 含负荷记录
+    domain: DistributionTransformer
+    range: LoadRecord
+    comment: 配变的历史负荷量测。
+
+# ============================================================
+# 数据属性（Data Property）：16 个
+# ============================================================
+data_properties:
+  - name: name
+    label: 名称
+    domain: Entity
+    range: xsd:string
+    comment: 设备或对象的中文名称。
+
+  - name: code
+    label: 调度编号
+    domain: PowerEquipment
+    range: xsd:string
+    comment: 电力系统内的唯一调度编号，如 S1、F01。
+
+  - name: voltageLevelKV
+    label: 电压等级
+    domain: PowerEquipment
+    range: xsd:float
+    unit: kV
+    comment: 额定电压等级。
+
+  - name: ratedCapacityKW
+    label: 额定容量
+    domain: PowerEquipment
+    range: xsd:float
+    unit: kW
+    comment: 馈线或配变的有功容量上限，过载判定的分母。演示数据按功率因数约 1 折算。
+
+  - name: currentLoadKW
+    label: 当前负荷
+    domain: PowerEquipment
+    range: xsd:float
+    unit: kW
+    comment: 当前有功负荷，过载判定的分子。
+
+  - name: loadRate
+    label: 负载率
+    domain: PowerEquipment
+    range: xsd:float
+    unit: "%"
+    comment: 当前负荷与额定容量之比，由规则 R4 计算并回写。
+
+  - name: householdCount
+    label: 户数
+    domain: TransformerDistrict
+    range: xsd:integer
+    unit: 户
+    comment: 台区内的居民户数，停电影响统计口径。
+
+  - name: customerCount
+    label: 用户数
+    domain: TransformerDistrict
+    range: xsd:integer
+    unit: 户
+    comment: 台区内的用户实体数量。
+
+  - name: isCriticalLoad
+    label: 是否重要负荷
+    domain: Customer
+    range: xsd:boolean
+    comment: 医院、学校、数据中心等重要用户标记，转供排序时优先保障。
+
+  - name: normallyOpen
+    label: 常态分位
+    domain: Switch
+    range: xsd:boolean
+    comment: 开关的正常运行位置。联络开关常态分为真，这是转供可行性的前提。
+
+  - name: faultType
+    label: 故障类型
+    domain: Fault
+    range: xsd:string
+    comment: 电缆击穿、架空断线、配变烧损等。
+
+  - name: faultTime
+    label: 故障时间
+    domain: Fault
+    range: xsd:dateTime
+    comment: 故障发生时刻。
+
+  - name: durationMinutes
+    label: 持续时长
+    domain: Fault
+    range: xsd:integer
+    unit: 分钟
+    comment: 故障从发生到隔离的时长。
+
+  - name: orderStatus
+    label: 工单状态
+    domain: MaintenanceOrder
+    range: xsd:string
+    comment: 待批准、已批准、执行中、已完成。
+
+  - name: plannedStart
+    label: 计划开始
+    domain: MaintenanceOrder
+    range: xsd:dateTime
+    comment: 计划检修开始时间。
+
+  - name: plannedEnd
+    label: 计划结束
+    domain: MaintenanceOrder
+    range: xsd:dateTime
+    comment: 计划检修结束时间。
+
+  - name: priority
+    label: 优先级
+    domain: MaintenanceOrder
+    range: xsd:integer
+    comment: 数值越小优先级越高。
+
+  - name: address
+    label: 地址
+    domain: Area
+    range: xsd:string
+    comment: 台区或用户的地理位置描述。
+
+# ============================================================
+# 个体（Individual）：状态枚举
+# ============================================================
+individuals:
+  - name: OpenState
+    label: 分位（断开）
+    class: OperatingState
+    code: "01"
+    comment: 开关断开，电气不连通。
+
+  - name: ClosedState
+    label: 合位（闭合）
+    class: OperatingState
+    code: "02"
+    comment: 开关闭合，电气连通。
+
+# ============================================================
+# 公理（Axiom）：16 条，其中 12 条直接服务于推理
+# ============================================================
+axioms:
+  - id: A1
+    type: transitive
+    property: upstreamOf
+    label: 上下游关系具有传递性
+    rationale: 使「S1 断开则其下游全部失电」可以由 OWL 推理机沿链路自动展开，无需为每个末端设备手工断言。
+
+  - id: A2
+    type: inverse
+    property: upstreamOf
+    inverse: downstreamOf
+    label: 上下游互为逆关系
+    rationale: 只断言一次上游关系，下游关系由推理机自动补齐，避免双方不一致。
+
+  - id: A3
+    type: qualified_cardinality
+    class: Feeder
+    property: belongsToSubstation
+    exactly: 1
+    filler: Substation
+    label: 每条馈线必须且只能属于一个变电站
+    rationale: 保证馈线有唯一电源点，否则失电判定会出现多条供电路径，结论不唯一。
+
+  - id: A4
+    type: qualified_cardinality
+    class: DistributionTransformer
+    property: locatedOn
+    exactly: 1
+    filler: LineSection
+    label: 每台配变必须且只能装设于一个线路段
+    rationale: 配变位置唯一，失电判定的传播路径才唯一。
+
+  - id: A5
+    type: qualified_cardinality
+    class: TransformerDistrict
+    property: hasTransformer
+    exactly: 1
+    filler: DistributionTransformer
+    label: 每个台区恰好含一台配变
+    rationale: 该约束直接推出「台区内无第二台配变可切」，是配变过载只能靠切负荷解决的原因。
+
+  - id: A6
+    type: qualified_cardinality
+    class: Customer
+    property: servedByDistrict
+    exactly: 1
+    filler: TransformerDistrict
+    label: 每个用户必须且只能由一个台区供电
+    rationale: 影响户数统计不会重复计数，也不会漏计。
+
+  - id: A7
+    type: qualified_cardinality
+    class: TieSwitch
+    property: connectsFeeder
+    exactly: 2
+    filler: Feeder
+    label: 联络开关必须恰好连接两条馈线
+    rationale: 转供推理要求联络点两侧都有明确的馈线与容量，连接数不足即判定为数据质量问题。
+
+  - id: A8
+    type: subclass_value
+    class: TieSwitch
+    property: normallyOpen
+    value: "true"
+    datatype: xsd:boolean
+    label: 联络开关常态处于分位
+    rationale: 区分「常态运行方式」与「当前状态」，转供方案本质上是打破常态分位的有意操作。
+
+  - id: A9
+    type: functional
+    property: hasOperatingState
+    label: 开关状态唯一
+    rationale: 一个开关不可能同时分合，保证带电判定不会自相矛盾。
+
+  - id: A10
+    type: qualified_cardinality
+    class: Fault
+    property: affectsEquipment
+    exactly: 1
+    filler: PowerEquipment
+    label: 每个故障必须且只能定位到一个设备
+    rationale: 故障传播必须以唯一设备为起点，否则影响范围无法收敛。
+
+  - id: A11
+    type: all_disjoint
+    classes: [Substation, Feeder, LineSection, Switch, DistributionTransformer]
+    label: 五类一次设备两两不相交
+    rationale: 支撑一致性检查：同一设备不会被同时判定为两类，数据录入错误可被推理机发现。
+
+  - id: A12
+    type: disjoint_with
+    class_a: EnergizedEquipment
+    class_b: DeEnergizedEquipment
+    label: 带电设备与失电设备不相交
+    rationale: 规则层断言结论后，由 OWL 校验同一设备不会既带电又失电，这是推理结果的自检机制。
+
+  - id: A13
+    type: disjoint_with
+    class_a: OverloadedTransformer
+    class_b: HeavyLoadTransformer
+    label: 过载与重载互斥
+    rationale: 负载率只能落在一个区间，避免同一台配变被同时归入两类。
+
+  - id: A14
+    type: subclass_restriction
+    class: OverloadedTransformer
+    on_property: hasTransformer
+    some: DistributionTransformer
+    label: 过载配变必然是某台区的配变
+    rationale: 把结论类锚定在设备本体上，使过载结论能顺藤摸到台区与用户。
+
+  - id: A15
+    type: qualified_cardinality
+    class: OutageEvent
+    property: affectsDistrict
+    min: 1
+    filler: TransformerDistrict
+    label: 停电事件至少影响一个台区
+    rationale: 排除「零影响」的空事件，保证每条停电记录都可核算到户。
+
+  - id: A16
+    type: property_chain
+    chain: [upstreamOf, upstreamOf]
+    implies: upstreamOf
+    label: 上游链的复合仍为上游
+    rationale: 与 A1 互为表里，展示 OWL 2 属性链写法，兼容不支持传递性的推理机。
